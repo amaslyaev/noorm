@@ -1,0 +1,13 @@
+.venv
+.vscode
+__pycache__
+.pytest_cache
+.coverage*
+.*.sh
+.pylint*
+dist
+htmlcov
+junit
+coverage.xml
+
+eval

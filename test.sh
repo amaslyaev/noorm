@@ -1,0 +1,1 @@
+pytest -vv --cov=noorm --cov-report term-missing
