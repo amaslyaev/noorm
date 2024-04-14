@@ -85,7 +85,7 @@ from ._pymysql import (
     sql_fetch_scalars,
     sql_execute,
 )
-from .._db_api_2 import params, query_and_params, query_only
+from noorm._db_api_2 import params, query_and_params, query_only
 
 __all__ = [
     "sql_fetch_all",

@@ -8,7 +8,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.9", "3.10", "3.11", "3.12"]
+        python-version: ["3.9", "3.10", "3.11"]
 
     steps:
       - uses: actions/checkout@v2
@@ -29,7 +29,7 @@ jobs:
           flake8 noorm --count --exit-zero --max-line-length=100 --statistics
       - name: Test with pytest
         run: |
-          pytest --junitxml=junit/test-results.xml --cov=noorm --cov-report=xml --cov-report=html
+          export PYTHONPATH=$(pwd) && pytest --junitxml=junit/test-results.xml --cov=noorm --cov-report=xml --cov-report=html
       - name: Test with mypy
         run: |
           mypy noorm

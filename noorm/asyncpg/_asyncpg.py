@@ -3,7 +3,7 @@ from typing import overload
 
 import asyncpg
 
-from .._db_api_2_args_only import _PrepareFuncResult
+from noorm._db_api_2_args_only import _PrepareFuncResult
 
 F_Spec = ParamSpec("F_Spec")
 F_Return = TypeVar("F_Return")

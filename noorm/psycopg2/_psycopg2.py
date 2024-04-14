@@ -4,7 +4,7 @@ NoORM (Not Only ORM) helpers for psycopg2
 
 from typing import Type, Callable, ParamSpec, TypeVar, Concatenate, Any, overload
 
-from .._db_api_2 import _PrepareFuncResult
+from noorm._db_api_2 import _PrepareFuncResult
 
 F_Spec = ParamSpec("F_Spec")
 F_Return = TypeVar("F_Return")

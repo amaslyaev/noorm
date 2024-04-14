@@ -1,11 +1,11 @@
 from typing import Type, Callable, ParamSpec, TypeVar, Concatenate, overload
 import sqlite3
 
-from .._sqlite_common import (
+from noorm._sqlite_common import (
     make_decoder as _make_decoder,
     make_scalar_decoder as _make_scalar_decoder,
 )
-from .._db_api_2 import _PrepareFuncResult
+from noorm._db_api_2 import _PrepareFuncResult
 
 F_Spec = ParamSpec("F_Spec")
 F_Return = TypeVar("F_Return")

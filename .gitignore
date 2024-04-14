@@ -11,3 +11,4 @@ junit
 coverage.xml
 
 eval
+Dockerfile

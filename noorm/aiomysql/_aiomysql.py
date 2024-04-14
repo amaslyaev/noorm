@@ -2,7 +2,7 @@ from typing import Type, Callable, ParamSpec, TypeVar, Any, Coroutine, Concatena
 from typing import overload
 from aiomysql import Connection
 
-from .._db_api_2 import _PrepareFuncResult
+from noorm._db_api_2 import _PrepareFuncResult
 
 F_Spec = ParamSpec("F_Spec")
 F_Return = TypeVar("F_Return")
