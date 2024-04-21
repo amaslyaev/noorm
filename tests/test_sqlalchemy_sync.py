@@ -26,7 +26,7 @@ class User(Base):
 def engine():
     engine = sa.create_engine("sqlite://")
     with engine.begin() as conn:
-        conn.run_callable(meta.create_all)
+        meta.create_all(conn)
 
     with Session(engine) as session:
         session.add_all(
