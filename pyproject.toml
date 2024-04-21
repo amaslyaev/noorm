@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "noorm"
+name = "true-noorm"
 version = "0.1.0"
 description = "NoORM (Not only ORM) - make your database operations convenient and natural"
 authors = ["Alexander Maslyeav <maslyaev@gmail.com>"]
@@ -8,7 +8,7 @@ readme = "README.md"
 homepage = "https://github.com/amaslyaev/noorm/"
 repository = "https://github.com/amaslyaev/noorm/"
 documentation = ""
-keywords = ["database", "sql", "orm", "sqlite", "postgres", "postgresql", "mysql"]
+keywords = ["database", "sql", "orm", "noorm", "sqlite", "postgres", "postgresql", "mysql"]
 classifiers = [
     "Topic :: Software Development :: Libraries :: Python Modules",
     "Intended Audience :: Developers",
