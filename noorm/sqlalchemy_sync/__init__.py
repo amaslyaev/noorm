@@ -33,7 +33,7 @@ import noorm.sqlalchemy_sync as nm
 from db import User  # Model class for users table
 
 # Fetch all
-@nm.sql_fetch_all(namedtuple("DbAllUsersResult", "id, username"))
+@nm.sql_fetch_all(namedtuple("DbAllUsersResult", "id, username, email"))
 def get_all_users():
     return sa.select(User.id, User.username, User.email).order_by(User.id))
 
