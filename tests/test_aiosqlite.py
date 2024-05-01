@@ -45,7 +45,7 @@ async def tst_conn():
         yield conn
 
 
-# =========== sql_fetch_all ===========
+# MARK: sql_fetch_all
 
 
 @nm.sql_fetch_all(
@@ -112,6 +112,8 @@ class UInfo:
     order by rowid""",
 )
 def find_users_by_text(search: str):
+    if not search:
+        raise nm.CancelExecException
     return nm.params(search=f"%{search}%")
 
 
@@ -135,9 +137,11 @@ async def test_fetch_find(tst_conn: aiosqlite.Connection):
             last_seen=None,
         ),
     ]
+    got = await find_users_by_text(tst_conn, None)
+    assert got == []
 
 
-# =========== sql_one_or_none ===========
+# MARK: sql_one_or_none
 
 
 @dataclass
@@ -159,7 +163,7 @@ async def test_one_or_none(tst_conn: aiosqlite.Connection):
     assert user_info is None
 
 
-# =========== sql_scalar_or_none ===========
+# MARK: sql_scalar_or_none
 
 
 @nm.sql_scalar_or_none(int, "select count(*) from users;")
@@ -199,7 +203,7 @@ async def test_scalar_or_none(tst_conn: aiosqlite.Connection):
     assert (await get_random_user_id(tst_conn, 999)) is None
 
 
-# =========== nm.sql_fetch_scalars ===========
+# MARK: nm.sql_fetch_scalars
 
 
 @nm.sql_fetch_scalars(int, "select rowid from users;")
@@ -217,6 +221,13 @@ def get_user_ids_any():
     pass
 
 
+@nm.sql_fetch_scalars(int, "select rowid from users where username like :search;")
+def get_user_ids_search(search: str):
+    if not search:
+        raise nm.CancelExecException
+    return nm.params(search=f"%{search}%")
+
+
 @nm.sql_fetch_scalars(bytes, "select password_hash from users;")
 def get_user_ids_p_hashes():
     pass
@@ -231,9 +242,13 @@ async def test_fetch_scalars(tst_conn: aiosqlite.Connection):
     assert got == [1, 2]
     got = await get_user_ids_p_hashes(tst_conn)
     assert got == [sha1(b"123456").digest(), None]
+    got = await get_user_ids_search(tst_conn, "j")
+    assert got == [1, 2]
+    got = await get_user_ids_search(tst_conn, "")
+    assert got == []
 
 
-# =========== sql_execute ===========
+# MARK: sql_execute
 
 
 @nm.sql_execute("insert into users(username, email) values(?, ?)")

@@ -8,18 +8,11 @@ from typing import Concatenate
 from sqlalchemy.sql import Executable, Select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from .._sqlalchemy_common import req_sql_n_params
+
 F_Spec = ParamSpec("F_Spec")
 F_Return = TypeVar("F_Return")
 TR = TypeVar("TR")
-
-
-def _req_sql_n_params(func, f_args, f_kwargs) -> Executable:
-    sql: Executable = func(*f_args, **f_kwargs)
-    if isinstance(sql, Executable):
-        return sql
-    raise TypeError(
-        f"Function {func.__name__} returned {type(sql).__name__} (expected Executable)"
-    )
 
 
 async def _commit_if_needed(
@@ -48,13 +41,14 @@ def sql_fetch_all(row_type: Type[TR], no_commit: bool = False):
         async def wrapper(
             session: AsyncSession, *args: F_Spec.args, **kwargs: F_Spec.kwargs
         ) -> list[TR]:
-            sql_stmt = _req_sql_n_params(func, args, kwargs)
-            q_res = (await session.execute(sql_stmt)).all()
-            await _commit_if_needed(session, sql_stmt, no_commit)
-            res: list[row_type] = [  # type: ignore
-                row_type(**{n: v for n, v in r._asdict().items()}) for r in q_res
-            ]
-            return res
+            if (sql_stmt := req_sql_n_params(func, args, kwargs)) is not None:
+                q_res = (await session.execute(sql_stmt)).all()
+                await _commit_if_needed(session, sql_stmt, no_commit)
+                res: list[row_type] = [  # type: ignore
+                    row_type(**{n: v for n, v in r._asdict().items()}) for r in q_res
+                ]
+                return res
+            return []
 
         return wrapper
 
@@ -80,12 +74,13 @@ def sql_one_or_none(row_type: Type[TR], no_commit: bool = False):
         async def wrapper(
             session: AsyncSession, *args: F_Spec.args, **kwargs: F_Spec.kwargs
         ) -> TR | None:
-            sql_stmt = _req_sql_n_params(func, args, kwargs)
-            q_res = (await session.execute(sql_stmt)).one_or_none()
-            await _commit_if_needed(session, sql_stmt, no_commit)
-            if q_res is None:
-                return None
-            return row_type(**{n: v for n, v in q_res._asdict().items()})
+            if (sql_stmt := req_sql_n_params(func, args, kwargs)) is not None:
+                q_res = (await session.execute(sql_stmt)).one_or_none()
+                await _commit_if_needed(session, sql_stmt, no_commit)
+                if q_res is None:
+                    return None
+                return row_type(**{n: v for n, v in q_res._asdict().items()})
+            return None
 
         return wrapper
 
@@ -113,14 +108,11 @@ def sql_scalar_or_none(res_type: Type[TR], no_commit: bool = False):
         async def wrapper(
             session: AsyncSession, *args: F_Spec.args, **kwargs: F_Spec.kwargs
         ) -> TR | None:
-            sql_stmt = _req_sql_n_params(func, args, kwargs)
-            q_res = (await session.execute(sql_stmt)).scalar_one_or_none()
-            await _commit_if_needed(session, sql_stmt, no_commit)
-            if q_res is None:
-                return None
-            if res_type is Any:
+            if (sql_stmt := req_sql_n_params(func, args, kwargs)) is not None:
+                q_res = (await session.execute(sql_stmt)).scalar_one_or_none()
+                await _commit_if_needed(session, sql_stmt, no_commit)
                 return q_res
-            return q_res
+            return None
 
         return wrapper
 
@@ -148,12 +140,11 @@ def sql_fetch_scalars(res_type: Type[TR], no_commit: bool = False):
         async def wrapper(
             session: AsyncSession, *args: F_Spec.args, **kwargs: F_Spec.kwargs
         ) -> list[TR]:
-            sql_stmt = _req_sql_n_params(func, args, kwargs)
-            q_res = (await session.execute(sql_stmt)).scalars()
-            await _commit_if_needed(session, sql_stmt, no_commit)
-            if res_type is Any:
+            if (sql_stmt := req_sql_n_params(func, args, kwargs)) is not None:
+                q_res = (await session.execute(sql_stmt)).scalars()
+                await _commit_if_needed(session, sql_stmt, no_commit)
                 return [el for el in q_res]
-            return [el for el in q_res]
+            return []
 
         return wrapper
 
@@ -164,7 +155,7 @@ def sql_fetch_scalars(res_type: Type[TR], no_commit: bool = False):
 def sql_execute(
     func: Callable[F_Spec, Executable]
 ) -> Callable[Concatenate[AsyncSession, F_Spec], Coroutine[Any, Any, None]]:
-    ...  # pragma: no cover
+    pass  # pragma: no cover
 
 
 @overload
@@ -174,7 +165,7 @@ def sql_execute(
     [Callable[F_Spec, Coroutine[Any, Any, None]]],
     Callable[Concatenate[AsyncSession, F_Spec], Coroutine[Any, Any, None]],
 ]:
-    ...  # pragma: no cover
+    pass  # pragma: no cover
 
 
 def sql_execute(  # type: ignore
@@ -204,9 +195,9 @@ def sql_execute(  # type: ignore
             async def wrapper(
                 session: AsyncSession, *args: F_Spec.args, **kwargs: F_Spec.kwargs
             ) -> None:
-                sql_stmt = _req_sql_n_params(func, args, kwargs)
-                await session.execute(sql_stmt)
-                await _commit_if_needed(session, sql_stmt, no_commit)
+                if (sql_stmt := req_sql_n_params(func, args, kwargs)) is not None:
+                    await session.execute(sql_stmt)
+                    await _commit_if_needed(session, sql_stmt, no_commit)
 
             return wrapper
 

@@ -39,14 +39,15 @@ def sql_fetch_all(row_type: Type[TR], sql: str | None = None):
         async def wrapper(
             conn: ConnectionOrCursor, *args: F_Spec.args, **kwargs: F_Spec.kwargs
         ) -> list[TR]:
-            sql_text, params = req_sql_n_params(func, args, kwargs, sql)
-            q_res = await conn.execute(sql_text, params)
-            col_names = tuple(el[0] for el in q_res.description)
-            res: list[row_type] = [  # type: ignore
-                row_type(**decoder({n: v for n, v in zip(col_names, r)}))
-                async for r in q_res
-            ]
-            return res
+            if sql_and_params := req_sql_n_params(func, args, kwargs, sql):
+                q_res = await conn.execute(*sql_and_params)
+                col_names = tuple(el[0] for el in q_res.description)
+                res: list[row_type] = [  # type: ignore
+                    row_type(**decoder({n: v for n, v in zip(col_names, r)}))
+                    async for r in q_res
+                ]
+                return res
+            return []
 
         return wrapper
 
@@ -78,11 +79,11 @@ def sql_one_or_none(row_type: Type[TR], sql: str | None = None):
         async def wrapper(
             conn: ConnectionOrCursor, *args: F_Spec.args, **kwargs: F_Spec.kwargs
         ) -> TR | None:
-            sql_text, params = req_sql_n_params(func, args, kwargs, sql)
-            q_res = await conn.execute(sql_text, params)
-            col_names = tuple(el[0] for el in q_res.description)
-            async for row in q_res:
-                return row_type(**decoder({n: v for n, v in zip(col_names, row)}))
+            if sql_and_params := req_sql_n_params(func, args, kwargs, sql):
+                q_res = await conn.execute(*sql_and_params)
+                col_names = tuple(el[0] for el in q_res.description)
+                async for row in q_res:
+                    return row_type(**decoder({n: v for n, v in zip(col_names, row)}))
             return None
 
         return wrapper
@@ -117,10 +118,10 @@ def sql_scalar_or_none(res_type: Type[TR], sql: str | None = None):
         async def wrapper(
             conn: ConnectionOrCursor, *args: F_Spec.args, **kwargs: F_Spec.kwargs
         ) -> TR | None:
-            sql_text, params = req_sql_n_params(func, args, kwargs, sql)
-            q_res = await conn.execute(sql_text, params)
-            async for row in q_res:
-                return decoder(row[0])
+            if sql_and_params := req_sql_n_params(func, args, kwargs, sql):
+                q_res = await conn.execute(*sql_and_params)
+                async for row in q_res:
+                    return decoder(row[0])
             return None
 
         return wrapper
@@ -155,9 +156,10 @@ def sql_fetch_scalars(res_type: Type[TR], sql: str | None = None):
         async def wrapper(
             conn: ConnectionOrCursor, *args: F_Spec.args, **kwargs: F_Spec.kwargs
         ) -> list[TR]:
-            sql_text, params = req_sql_n_params(func, args, kwargs, sql)
-            q_res = await conn.execute(sql_text, params)
-            return [decoder(row[0]) async for row in q_res]
+            if sql_and_params := req_sql_n_params(func, args, kwargs, sql):
+                q_res = await conn.execute(*sql_and_params)
+                return [decoder(row[0]) async for row in q_res]
+            return []
 
         return wrapper
 
@@ -211,8 +213,8 @@ def sql_execute(  # type: ignore
             async def wrapper(
                 conn: ConnectionOrCursor, *args: F_Spec.args, **kwargs: F_Spec.kwargs
             ) -> None:
-                sql_text, params = req_sql_n_params(func, args, kwargs, sql)
-                await conn.execute(sql_text, params)
+                if sql_and_params := req_sql_n_params(func, args, kwargs, sql):
+                    await conn.execute(*sql_and_params)
 
             return wrapper
 

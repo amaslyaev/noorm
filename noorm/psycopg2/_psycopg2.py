@@ -28,14 +28,15 @@ def sql_fetch_all(row_type: Type[TR], sql: str | None = None):
         func: Callable[F_Spec, PrepareFuncResult | None]
     ) -> Callable[Concatenate[Psycopg2Connection, F_Spec], list[TR]]:
         def wrapper(conn, *args: F_Spec.args, **kwargs: F_Spec.kwargs) -> list[TR]:
-            sql_text, params = req_sql_n_params(func, args, kwargs, sql)
-            with conn.cursor() as cur:
-                cur.execute(sql_text, params)
-                col_names = tuple(el[0] for el in cur.description)
-                res: list[row_type] = [  # type: ignore
-                    row_type(**{n: v for n, v in zip(col_names, r)}) for r in cur
-                ]
-                return res
+            if sql_and_params := req_sql_n_params(func, args, kwargs, sql):
+                with conn.cursor() as cur:
+                    cur.execute(*sql_and_params)
+                    col_names = tuple(el[0] for el in cur.description)
+                    res: list[row_type] = [  # type: ignore
+                        row_type(**{n: v for n, v in zip(col_names, r)}) for r in cur
+                    ]
+                    return res
+            return []
 
         return wrapper
 
@@ -58,13 +59,13 @@ def sql_one_or_none(row_type: Type[TR], sql: str | None = None):
         func: Callable[F_Spec, PrepareFuncResult | None],
     ) -> Callable[Concatenate[Psycopg2Connection, F_Spec], TR | None]:
         def wrapper(conn, *args: F_Spec.args, **kwargs: F_Spec.kwargs) -> TR | None:
-            sql_text, params = req_sql_n_params(func, args, kwargs, sql)
-            with conn.cursor() as cur:
-                cur.execute(sql_text, params)
-                col_names = tuple(el[0] for el in cur.description)
-                for row in cur:
-                    return row_type(**{n: v for n, v in zip(col_names, row)})
-                return None
+            if sql_and_params := req_sql_n_params(func, args, kwargs, sql):
+                with conn.cursor() as cur:
+                    cur.execute(*sql_and_params)
+                    col_names = tuple(el[0] for el in cur.description)
+                    for row in cur:
+                        return row_type(**{n: v for n, v in zip(col_names, row)})
+            return None
 
         return wrapper
 
@@ -88,12 +89,12 @@ def sql_scalar_or_none(res_type: Type[TR], sql: str | None = None):
         func: Callable[F_Spec, PrepareFuncResult | None],
     ) -> Callable[Concatenate[Psycopg2Connection, F_Spec], TR | None]:
         def wrapper(conn, *args: F_Spec.args, **kwargs: F_Spec.kwargs) -> TR | None:
-            sql_text, params = req_sql_n_params(func, args, kwargs, sql)
-            with conn.cursor() as cur:
-                cur.execute(sql_text, params)
-                for row in cur:
-                    return row[0]
-                return None
+            if sql_and_params := req_sql_n_params(func, args, kwargs, sql):
+                with conn.cursor() as cur:
+                    cur.execute(*sql_and_params)
+                    for row in cur:
+                        return row[0]
+            return None
 
         return wrapper
 
@@ -118,11 +119,12 @@ def sql_fetch_scalars(res_type: Type[TR], sql: str | None = None):
         func: Callable[F_Spec, PrepareFuncResult | None]
     ) -> Callable[Concatenate[Psycopg2Connection, F_Spec], list[TR]]:
         def wrapper(conn, *args: F_Spec.args, **kwargs: F_Spec.kwargs) -> list[TR]:
-            sql_text, params = req_sql_n_params(func, args, kwargs, sql)
-            with conn.cursor() as cur:
-                cur.execute(sql_text, params)
-                res: list[res_type] = [r[0] for r in cur]  # type: ignore
-                return res
+            if sql_and_params := req_sql_n_params(func, args, kwargs, sql):
+                with conn.cursor() as cur:
+                    cur.execute(*sql_and_params)
+                    res: list[res_type] = [r[0] for r in cur]  # type: ignore
+                    return res
+            return []
 
         return wrapper
 
@@ -169,9 +171,9 @@ def sql_execute(  # type: ignore
             func: Callable[F_Spec, PrepareFuncResult | None],
         ) -> Callable[Concatenate[Psycopg2Connection, F_Spec], None]:
             def wrapper(conn, *args: F_Spec.args, **kwargs: F_Spec.kwargs) -> None:
-                sql_text, params = req_sql_n_params(func, args, kwargs, sql)
-                with conn.cursor() as cur:
-                    cur.execute(sql_text, params)
+                if sql_and_params := req_sql_n_params(func, args, kwargs, sql):
+                    with conn.cursor() as cur:
+                        cur.execute(*sql_and_params)
 
             return wrapper
 

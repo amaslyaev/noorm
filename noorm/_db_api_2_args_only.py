@@ -1,3 +1,6 @@
+from ._common import CancelExecException
+
+
 class PrepareFuncResult:
     def __init__(self, sql: str | None, params: tuple | None) -> None:
         self.sql = sql
@@ -18,8 +21,11 @@ def query_only(sql: str):
 
 def req_sql_n_params(
     func, f_args, f_kwargs, default_sql: str | None
-) -> tuple[str, tuple]:
-    sql_n_params: PrepareFuncResult | None = func(*f_args, **f_kwargs)
+) -> tuple[str, tuple] | None:
+    try:
+        sql_n_params: PrepareFuncResult | None = func(*f_args, **f_kwargs)
+    except CancelExecException:
+        return None
     if sql_n_params is not None:
         if not isinstance(sql_n_params, PrepareFuncResult):
             raise TypeError(

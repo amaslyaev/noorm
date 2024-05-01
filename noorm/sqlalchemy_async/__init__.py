@@ -65,6 +65,7 @@ from ._sqlalchemy_async import (
     sql_fetch_scalars,
     sql_execute,
 )
+from noorm._common import CancelExecException
 
 __all__ = [
     "sql_fetch_all",
@@ -72,4 +73,5 @@ __all__ = [
     "sql_scalar_or_none",
     "sql_fetch_scalars",
     "sql_execute",
+    "CancelExecException",
 ]

@@ -63,20 +63,27 @@ get_all_users_fake_sql = (
 )
 
 
-# ---------------------- sql_fetch_all ----------------------
+# MARK: sql_fetch_all
 
 
 @nm.sql_fetch_all(namedtuple("AllUsersResult", "id,username"), get_all_users_fake_sql)
-def get_all_users_namedtuple():
-    pass
+def get_all_users_namedtuple(do_cancel: bool):
+    if do_cancel:
+        raise nm.CancelExecException
 
 
 async def test_fetch_all(tst_conn: MockConn):
-    got = await get_all_users_namedtuple(tst_conn)
+    got = await get_all_users_namedtuple(tst_conn, False)
     assert len(got) == 2
     rtype = type(got[0])
     assert got == [rtype(1, "John"), rtype(2, "Jane")]
     assert tst_conn.mock_exec.execute.call_args == call(get_all_users_fake_sql, tuple())
+
+
+async def test_fetch_all_cancel(tst_conn: MockConn):
+    got = await get_all_users_namedtuple(tst_conn, True)
+    assert got == []
+    assert tst_conn.mock_exec.execute.call_count == 0
 
 
 @nm.sql_fetch_all(namedtuple("AllUsersResult", "id,username"), get_all_users_fake_sql)
@@ -133,7 +140,7 @@ async def test_fetch_all_wrong(tst_conn: MockConn):
         _ = await get_all_users_wrong3(tst_conn, 1)
 
 
-# ---------------------- sql_one_or_none ----------------------
+# MARK: sql_one_or_none
 
 
 @dataclass
@@ -165,7 +172,7 @@ async def test_one_or_none(tst_conn: MockConn):
     assert tst_conn.mock_exec.execute.call_args == call("null", (999,))
 
 
-# ---------------------- sql_scalar_or_none ----------------------
+# MARK: sql_scalar_or_none
 
 
 @nm.sql_scalar_or_none(int, "-")
@@ -191,22 +198,25 @@ async def test_scalar_or_none(tst_conn: MockConn):
     assert got == "do not fail here"
 
 
-# ---------------------- sql_execute ----------------------
+# MARK: sql_fetch_scalars
 
 get_all_users_fake_sql_tuples = '[{"i":1, "n":"John"}, {"i":2, "n":"Jane"}]'
 
 
 @nm.sql_fetch_scalars(int, get_all_users_fake_sql_tuples)
-def get_user_ids():
-    pass
+def get_user_ids(do_cancel: bool):
+    if do_cancel:
+        raise nm.CancelExecException
 
 
 async def test_fetch_scalars(tst_conn: MockConn):
-    got = await get_user_ids(tst_conn)
+    got = await get_user_ids(tst_conn, False)
     assert got == [1, 2]
+    got = await get_user_ids(tst_conn, True)
+    assert got == []
 
 
-# ---------------------- sql_execute ----------------------
+# MARK: sql_execute
 
 
 @nm.sql_execute("null")

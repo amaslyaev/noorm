@@ -28,20 +28,27 @@ get_all_users_fake_sql = (
 )
 
 
-# ---------------------- sql_fetch_all ----------------------
+# MARK: sql_fetch_all
 
 
 @nm.sql_fetch_all(namedtuple("AllUsersResult", "id,username"), get_all_users_fake_sql)
-def get_all_users_namedtuple():
-    pass
+def get_all_users_namedtuple(do_cancel: bool):
+    if do_cancel:
+        raise nm.CancelExecException
 
 
 async def test_fetch_all(tst_conn: AsyncMock):
-    got = await get_all_users_namedtuple(tst_conn)
+    got = await get_all_users_namedtuple(tst_conn, False)
     assert len(got) == 2
     rtype = type(got[0])
     assert got == [rtype(1, "John"), rtype(2, "Jane")]
     assert tst_conn.fetch.call_args == call(get_all_users_fake_sql)
+
+
+async def test_fetch_all_cancel(tst_conn: AsyncMock):
+    got = await get_all_users_namedtuple(tst_conn, True)
+    assert got == []
+    assert tst_conn.fetch.call_count == 0
 
 
 @nm.sql_fetch_all(namedtuple("AllUsersResult", "id,username"), get_all_users_fake_sql)
@@ -94,7 +101,7 @@ async def test_fetch_all_wrong(tst_conn: AsyncMock):
         _ = await get_all_users_wrong3(tst_conn, 1)
 
 
-# ---------------------- sql_one_or_none ----------------------
+# MARK: sql_one_or_none
 
 
 @dataclass
@@ -107,7 +114,9 @@ get_one_user_fake_sql = '{"id": 1, "username": "John"}'
 
 
 @nm.sql_one_or_none(UData, get_one_user_fake_sql)
-def get_user_by_id(id_: int):
+def get_user_by_id(id_: int | None):
+    if id_ is None:
+        raise nm.CancelExecException
     return nm.params(id_)
 
 
@@ -126,11 +135,19 @@ async def test_one_or_none(tst_conn: AsyncMock):
     assert tst_conn.fetchrow.call_args == call("null", 999)
 
 
-# ---------------------- sql_scalar_or_none ----------------------
+async def test_one_or_none_cancel(tst_conn: AsyncMock):
+    got = await get_user_by_id(tst_conn, None)
+    assert got is None
+    assert tst_conn.fetchrow.call_count == 0
+
+
+# MARK: sql_scalar_or_none
 
 
 @nm.sql_scalar_or_none(int, "-")
-def get_scalar(qresult_json: str):
+def get_scalar(qresult_json: str, do_cancel: bool):
+    if do_cancel:
+        raise nm.CancelExecException
     return nm.query_only(qresult_json)
 
 
@@ -140,9 +157,11 @@ def get_any_scalar(qresult_json: str):
 
 
 async def test_scalar_or_none(tst_conn: AsyncMock):
-    got = await get_scalar(tst_conn, "123")
+    got = await get_scalar(tst_conn, "123", False)
     assert got == 123
-    got = await get_scalar(tst_conn, "null")
+    got = await get_scalar(tst_conn, "null", False)
+    assert got is None
+    got = await get_scalar(tst_conn, "123", True)
     assert got is None
     got = await get_any_scalar(tst_conn, "123")
     assert got == 123
@@ -152,22 +171,25 @@ async def test_scalar_or_none(tst_conn: AsyncMock):
     assert got == "do not fail here"
 
 
-# ---------------------- sql_execute ----------------------
+# MARK: sql_fetch_scalars
 
 get_all_users_fake_sql_tuples = '[[1, "John"], [2, "Jane"]]'
 
 
 @nm.sql_fetch_scalars(int, get_all_users_fake_sql_tuples)
-def get_user_ids():
-    pass
+def get_user_ids(do_cancel: bool):
+    if do_cancel:
+        raise nm.CancelExecException
 
 
 async def test_fetch_scalars(tst_conn: AsyncMock):
-    got = await get_user_ids(tst_conn)
+    got = await get_user_ids(tst_conn, False)
     assert got == [1, 2]
+    got = await get_user_ids(tst_conn, True)
+    assert got == []
 
 
-# ---------------------- sql_execute ----------------------
+# MARK: sql_execute
 
 
 @nm.sql_execute("-")

@@ -94,6 +94,7 @@ from ._aiomysql import (
     sql_execute,
 )
 from noorm._db_api_2 import params, query_and_params, query_only
+from noorm._common import CancelExecException
 
 __all__ = [
     "sql_fetch_all",
@@ -104,4 +105,5 @@ __all__ = [
     "params",
     "query_and_params",
     "query_only",
+    "CancelExecException",
 ]

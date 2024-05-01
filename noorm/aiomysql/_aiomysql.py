@@ -30,14 +30,16 @@ def sql_fetch_all(row_type: Type[TR], sql: str | None = None):
         async def wrapper(
             conn: Connection, *args: F_Spec.args, **kwargs: F_Spec.kwargs
         ) -> list[TR]:
-            sql_text, params = req_sql_n_params(func, args, kwargs, sql)
-            async with conn.cursor() as cur:
-                await cur.execute(sql_text, params)
-                col_names = tuple(el[0] for el in cur.description)
-                res: list[row_type] = [  # type: ignore
-                    row_type(**{n: v for n, v in zip(col_names, r)}) async for r in cur
-                ]
-                return res
+            if sql_and_params := req_sql_n_params(func, args, kwargs, sql):
+                async with conn.cursor() as cur:
+                    await cur.execute(*sql_and_params)
+                    col_names = tuple(el[0] for el in cur.description)
+                    res: list[row_type] = [  # type: ignore
+                        row_type(**{n: v for n, v in zip(col_names, r)})
+                        async for r in cur
+                    ]
+                    return res
+            return []
 
         return wrapper
 
@@ -65,14 +67,14 @@ def sql_one_or_none(row_type: Type[TR], sql: str | None = None):
         async def wrapper(
             conn: Connection, *args: F_Spec.args, **kwargs: F_Spec.kwargs
         ) -> TR | None:
-            sql_text, params = req_sql_n_params(func, args, kwargs, sql)
-            async with conn.cursor() as cur:
-                await cur.execute(sql_text, params)
-                col_names = tuple(el[0] for el in cur.description)
-                row = await cur.fetchone()
-                if row is not None:
-                    return row_type(**{n: v for n, v in zip(col_names, row)})
-                return None
+            if sql_and_params := req_sql_n_params(func, args, kwargs, sql):
+                async with conn.cursor() as cur:
+                    await cur.execute(*sql_and_params)
+                    col_names = tuple(el[0] for el in cur.description)
+                    row = await cur.fetchone()
+                    if row is not None:
+                        return row_type(**{n: v for n, v in zip(col_names, row)})
+            return None
 
         return wrapper
 
@@ -102,13 +104,13 @@ def sql_scalar_or_none(res_type: Type[TR], sql: str | None = None):
         async def wrapper(
             conn: Connection, *args: F_Spec.args, **kwargs: F_Spec.kwargs
         ) -> TR | None:
-            sql_text, params = req_sql_n_params(func, args, kwargs, sql)
-            async with conn.cursor() as cur:
-                await cur.execute(sql_text, params)
-                row = await cur.fetchone()
-                if row is not None:
-                    return row[0]
-                return None
+            if sql_and_params := req_sql_n_params(func, args, kwargs, sql):
+                async with conn.cursor() as cur:
+                    await cur.execute(*sql_and_params)
+                    row = await cur.fetchone()
+                    if row is not None:
+                        return row[0]
+            return None
 
         return wrapper
 
@@ -138,10 +140,11 @@ def sql_fetch_scalars(res_type: Type[TR], sql: str | None = None):
         async def wrapper(
             conn: Connection, *args: F_Spec.args, **kwargs: F_Spec.kwargs
         ) -> list[TR]:
-            sql_text, params = req_sql_n_params(func, args, kwargs, sql)
-            async with conn.cursor() as cur:
-                await cur.execute(sql_text, params)
-                return [row[0] async for row in cur]
+            if sql_and_params := req_sql_n_params(func, args, kwargs, sql):
+                async with conn.cursor() as cur:
+                    await cur.execute(*sql_and_params)
+                    return [row[0] async for row in cur]
+            return []
 
         return wrapper
 
@@ -193,9 +196,9 @@ def sql_execute(  # type: ignore
             async def wrapper(
                 conn: Connection, *args: F_Spec.args, **kwargs: F_Spec.kwargs
             ) -> None:
-                sql_text, params = req_sql_n_params(func, args, kwargs, sql)
-                async with conn.cursor() as cur:
-                    await cur.execute(sql_text, params)
+                if sql_and_params := req_sql_n_params(func, args, kwargs, sql):
+                    async with conn.cursor() as cur:
+                        await cur.execute(*sql_and_params)
 
             return wrapper
 

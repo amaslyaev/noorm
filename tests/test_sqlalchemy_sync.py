@@ -8,8 +8,6 @@ from sqlalchemy.orm import declarative_base, Session
 import noorm.sqlalchemy_sync as nm
 
 
-# =========== Fixtures
-
 meta = sa.MetaData()
 Base = declarative_base(metadata=meta)
 
@@ -45,19 +43,24 @@ def session(engine: sa.engine.Engine) -> Generator[Session, None, None]:
         yield session
 
 
-# =========== nm.sql_fetch_all ===========
+# MARK: sql_fetch_all
 
 
 @nm.sql_fetch_all(namedtuple("AllUsersResult", "id,username"))
-def get_all_users_namedtuple():
+def get_all_users_namedtuple(do_cancel: bool):
+    if do_cancel:
+        raise nm.CancelExecException
     return sa.select(User.id, User.username).order_by(User.id)
 
 
 def test_fetch_all(session: Session):
-    got = get_all_users_namedtuple(session)
+    got = get_all_users_namedtuple(session, False)
     assert len(got) == 2
     rtype = type(got[0])
     assert got == [rtype(1, "John"), rtype(2, "Jane")]
+
+    got = get_all_users_namedtuple(session, True)
+    assert got == []
 
 
 @nm.sql_fetch_all(namedtuple("AllUsersResult", "id,username"))
@@ -77,7 +80,7 @@ def test_fetch_all_wrong(session: Session):
         _ = get_all_users_wrong2(session, 1)
 
 
-# =========== nm.sql_one_or_none ===========
+# MARK: sql_one_or_none
 
 
 @nm.sql_one_or_none(namedtuple("UsersTabInfo", "cnt, max_id"))
@@ -93,7 +96,9 @@ def test_get_users_tab_info(session: Session):
 
 
 @nm.sql_one_or_none(namedtuple("UserInfo", "id, username, email"))
-def get_user_info(user_id: int):
+def get_user_info(user_id: int | None):
+    if user_id is None:
+        raise nm.CancelExecException
     return sa.select(User.id, User.username, User.email).filter(User.id == user_id)
 
 
@@ -105,9 +110,11 @@ def test_get_user_info(session: Session):
     assert got.email == "john@doe.com"
     got = get_user_info(session, 3)
     assert got is None
+    got = get_user_info(session, None)
+    assert got is None
 
 
-# =========== nm.sql_scalar_or_none ===========
+# MARK: sql_scalar_or_none
 
 
 @nm.sql_scalar_or_none(int)
@@ -121,7 +128,9 @@ def test_get_users_count(session: Session):
 
 
 @nm.sql_scalar_or_none(str)
-def get_user_name(user_id: int):
+def get_user_name(user_id: int | None):
+    if user_id is None:
+        raise nm.CancelExecException
     return sa.select(User.username).filter(User.id == user_id)
 
 
@@ -133,23 +142,29 @@ def get_user_name_any(user_id: int):
 def test_get_user_name(session: Session):
     got = get_user_name(session, 2)
     assert got == "Jane"
+    got = get_user_name(session, None)
+    assert got is None
     got = get_user_name_any(session, 2)
     assert got == "Jane"
     got = get_user_name_any(session, 3)
     assert got is None
 
 
-# =========== nm.sql_fetch_scalars ===========
+# MARK: sql_fetch_scalars
 
 
 @nm.sql_fetch_scalars(int)
-def get_user_ids():
+def get_user_ids(do_cancel: bool):
+    if do_cancel:
+        raise nm.CancelExecException
     return sa.select(User.id)
 
 
 def test_fetch_scalars(session: Session):
-    got = get_user_ids(session)
+    got = get_user_ids(session, False)
     assert got == [1, 2]
+    got = get_user_ids(session, True)
+    assert got == []
 
 
 @nm.sql_fetch_scalars(Any)
@@ -162,7 +177,7 @@ def test_fetch_scalars_any(session: Session):
     assert got == [1, 2]
 
 
-# =========== nm.sql_execute ===========
+# MARK: sql_execute
 
 
 @nm.sql_execute  # decorator without parameters

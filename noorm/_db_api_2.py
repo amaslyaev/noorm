@@ -3,6 +3,8 @@ Implements DB_API_2-compliant 'params', 'query_and_params', and 'query_only'
 functions.
 """
 
+from ._common import CancelExecException
+
 
 class PrepareFuncResult:
     def __init__(self, sql: str | None, params: tuple | dict | None) -> None:
@@ -36,8 +38,12 @@ def query_only(sql: str):
 
 def req_sql_n_params(
     func, f_args, f_kwargs, default_sql: str | None
-) -> tuple[str, dict | tuple]:
-    sql_n_params: PrepareFuncResult | None = func(*f_args, **f_kwargs)
+) -> tuple[str, dict | tuple] | None:
+    try:
+        sql_n_params: PrepareFuncResult | None = func(*f_args, **f_kwargs)
+    except CancelExecException:
+        return None
+
     if sql_n_params is not None:
         if not isinstance(sql_n_params, PrepareFuncResult):
             raise TypeError(
