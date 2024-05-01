@@ -36,7 +36,7 @@ def sql_fetch_all(row_type: Type[TR], sql: str | None = None):
             if sql_and_params := req_sql_n_params(func, args, kwargs, sql):
                 q_res = conn.execute(*sql_and_params)
                 col_names = tuple(el[0] for el in q_res.description)
-                res: list[row_type] = [  # type: ignore
+                res: list[TR] = [
                     row_type(**decoder({n: v for n, v in zip(col_names, r)}))
                     for r in q_res
                 ]

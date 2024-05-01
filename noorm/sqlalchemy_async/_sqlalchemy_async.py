@@ -44,7 +44,7 @@ def sql_fetch_all(row_type: Type[TR], no_commit: bool = False):
             if (sql_stmt := req_sql_n_params(func, args, kwargs)) is not None:
                 q_res = (await session.execute(sql_stmt)).all()
                 await _commit_if_needed(session, sql_stmt, no_commit)
-                res: list[row_type] = [  # type: ignore
+                res: list[TR] = [
                     row_type(**{n: v for n, v in r._asdict().items()}) for r in q_res
                 ]
                 return res

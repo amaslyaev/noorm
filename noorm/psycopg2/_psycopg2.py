@@ -32,7 +32,7 @@ def sql_fetch_all(row_type: Type[TR], sql: str | None = None):
                 with conn.cursor() as cur:
                     cur.execute(*sql_and_params)
                     col_names = tuple(el[0] for el in cur.description)
-                    res: list[row_type] = [  # type: ignore
+                    res: list[TR] = [
                         row_type(**{n: v for n, v in zip(col_names, r)}) for r in cur
                     ]
                     return res
@@ -122,7 +122,7 @@ def sql_fetch_scalars(res_type: Type[TR], sql: str | None = None):
             if sql_and_params := req_sql_n_params(func, args, kwargs, sql):
                 with conn.cursor() as cur:
                     cur.execute(*sql_and_params)
-                    res: list[res_type] = [r[0] for r in cur]  # type: ignore
+                    res: list[TR] = [r[0] for r in cur]
                     return res
             return []
 

@@ -34,7 +34,7 @@ def sql_fetch_all(row_type: Type[TR], sql: str | None = None):
                 async with conn.cursor() as cur:
                     await cur.execute(*sql_and_params)
                     col_names = tuple(el[0] for el in cur.description)
-                    res: list[row_type] = [  # type: ignore
+                    res: list[TR] = [
                         row_type(**{n: v for n, v in zip(col_names, r)})
                         async for r in cur
                     ]
@@ -87,8 +87,7 @@ def sql_scalar_or_none(res_type: Type[TR], sql: str | None = None):
     the function that prepares parameters for the query.
 
     :param row_type: type of expected result. For scalar queries it is usually `int`,
-    `str`, `bool`, `datetime`, or whatever can be produced by scalar query. Use Any to
-    return a value without conversion.
+    `str`, `bool`, `datetime`, or whatever can be produced by scalar query.
     :param sql: SQL statement to execute. If None, the SQL statement must be provided
     by decorated function.
 
@@ -124,7 +123,7 @@ def sql_fetch_scalars(res_type: Type[TR], sql: str | None = None):
 
     :param row_type: type of expected result. For scalar queries it is usually `int`,
     `str`, `bool`, `datetime`, or whatever can be produced in a single-column query
-    result. Use Any to return a value without conversion.
+    result.
     :param sql: SQL statement to execute. If None, the SQL statement must be provided
     by decorated function.
 

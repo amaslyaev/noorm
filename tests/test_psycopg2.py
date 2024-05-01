@@ -1,4 +1,3 @@
-from typing import Any
 from collections import namedtuple
 from dataclasses import dataclass
 import json
@@ -169,22 +168,11 @@ def get_scalar(qresult_json: str):
     return nm.query_only(qresult_json)
 
 
-@nm.sql_scalar_or_none(Any, "-")
-def get_any_scalar(qresult_json: str):
-    return nm.query_only(qresult_json)
-
-
 def test_scalar_or_none(tst_conn: Mock):
     got = get_scalar(tst_conn, '[{"v": 123}]')
     assert got == 123
     got = get_scalar(tst_conn, "[]")
     assert got is None
-    got = get_any_scalar(tst_conn, '[{"v": 123}]')
-    assert got == 123
-    got = get_any_scalar(tst_conn, "[]")
-    assert got is None
-    got = get_any_scalar(tst_conn, '[{"v": "do not fail here"}]')
-    assert got == "do not fail here"
 
 
 # MARK: sql_fetch_scalars

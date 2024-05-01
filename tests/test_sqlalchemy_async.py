@@ -1,4 +1,4 @@
-from typing import Any, AsyncGenerator
+from typing import AsyncGenerator
 from collections import namedtuple
 
 import pytest
@@ -135,19 +135,10 @@ def get_user_name(user_id: int | None):
     return sa.select(User.username).filter(User.id == user_id)
 
 
-@nm.sql_scalar_or_none(Any)
-def get_user_name_any(user_id: int):
-    return sa.select(User.username).filter(User.id == user_id)
-
-
 async def test_get_user_name(session: AsyncSession):
     got = await get_user_name(session, 2)
     assert got == "Jane"
     got = await get_user_name(session, None)
-    assert got is None
-    got = await get_user_name_any(session, 2)
-    assert got == "Jane"
-    got = await get_user_name_any(session, 3)
     assert got is None
 
 
@@ -166,16 +157,6 @@ async def test_fetch_scalars(session: AsyncSession):
     assert got == [1, 2]
     got = await get_user_ids(session, True)
     assert got == []
-
-
-@nm.sql_fetch_scalars(Any)
-def get_user_ids_any():
-    return sa.select(User.id)
-
-
-async def test_fetch_scalars_any(session: AsyncSession):
-    got = await get_user_ids_any(session)
-    assert got == [1, 2]
 
 
 # MARK: sql_execute
