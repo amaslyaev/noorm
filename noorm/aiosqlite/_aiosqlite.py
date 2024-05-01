@@ -2,11 +2,12 @@ from typing import Type, Callable, ParamSpec, TypeVar, Any, Coroutine, Concatena
 from typing import overload
 import aiosqlite
 
-from noorm._sqlite_common import (
+from .._common import WrapperBase
+from .._sqlite_common import (
     make_decoder as _make_decoder,
     make_scalar_decoder as _make_scalar_decoder,
 )
-from noorm._db_api_2 import PrepareFuncResult, req_sql_n_params
+from .._db_api_2 import PrepareFuncResult, req_sql_n_params
 
 F_Spec = ParamSpec("F_Spec")
 F_Return = TypeVar("F_Return")
@@ -36,20 +37,24 @@ def sql_fetch_all(row_type: Type[TR], sql: str | None = None):
     ]:
         decoder = _make_decoder(row_type)
 
-        async def wrapper(
-            conn: ConnectionOrCursor, *args: F_Spec.args, **kwargs: F_Spec.kwargs
-        ) -> list[TR]:
-            if sql_and_params := req_sql_n_params(func, args, kwargs, sql):
-                q_res = await conn.execute(*sql_and_params)
-                col_names = tuple(el[0] for el in q_res.description)
-                res: list[TR] = [
-                    row_type(**decoder({n: v for n, v in zip(col_names, r)}))
-                    async for r in q_res
-                ]
-                return res
-            return []
+        class wrapper(WrapperBase):
+            async def __call__(
+                self,
+                conn: ConnectionOrCursor,
+                *args: F_Spec.args,
+                **kwargs: F_Spec.kwargs,
+            ) -> list[TR]:
+                if sql_and_params := req_sql_n_params(self._func, args, kwargs, sql):
+                    q_res = await conn.execute(*sql_and_params)
+                    col_names = tuple(el[0] for el in q_res.description)
+                    res: list[TR] = [
+                        row_type(**decoder({n: v for n, v in zip(col_names, r)}))
+                        async for r in q_res
+                    ]
+                    return res
+                return []
 
-        return wrapper
+        return wrapper(func)
 
     return decorator
 
@@ -76,17 +81,23 @@ def sql_one_or_none(row_type: Type[TR], sql: str | None = None):
     ]:
         decoder = _make_decoder(row_type)
 
-        async def wrapper(
-            conn: ConnectionOrCursor, *args: F_Spec.args, **kwargs: F_Spec.kwargs
-        ) -> TR | None:
-            if sql_and_params := req_sql_n_params(func, args, kwargs, sql):
-                q_res = await conn.execute(*sql_and_params)
-                col_names = tuple(el[0] for el in q_res.description)
-                async for row in q_res:
-                    return row_type(**decoder({n: v for n, v in zip(col_names, row)}))
-            return None
+        class wrapper(WrapperBase):
+            async def __call__(
+                self,
+                conn: ConnectionOrCursor,
+                *args: F_Spec.args,
+                **kwargs: F_Spec.kwargs,
+            ) -> TR | None:
+                if sql_and_params := req_sql_n_params(self._func, args, kwargs, sql):
+                    q_res = await conn.execute(*sql_and_params)
+                    col_names = tuple(el[0] for el in q_res.description)
+                    async for row in q_res:
+                        return row_type(
+                            **decoder({n: v for n, v in zip(col_names, row)})
+                        )
+                return None
 
-        return wrapper
+        return wrapper(func)
 
     return decorator
 
@@ -115,16 +126,20 @@ def sql_scalar_or_none(res_type: Type[TR], sql: str | None = None):
     ]:
         decoder = _make_scalar_decoder(res_type)
 
-        async def wrapper(
-            conn: ConnectionOrCursor, *args: F_Spec.args, **kwargs: F_Spec.kwargs
-        ) -> TR | None:
-            if sql_and_params := req_sql_n_params(func, args, kwargs, sql):
-                q_res = await conn.execute(*sql_and_params)
-                async for row in q_res:
-                    return decoder(row[0])
-            return None
+        class wrapper(WrapperBase):
+            async def __call__(
+                self,
+                conn: ConnectionOrCursor,
+                *args: F_Spec.args,
+                **kwargs: F_Spec.kwargs,
+            ) -> TR | None:
+                if sql_and_params := req_sql_n_params(self._func, args, kwargs, sql):
+                    q_res = await conn.execute(*sql_and_params)
+                    async for row in q_res:
+                        return decoder(row[0])
+                return None
 
-        return wrapper
+        return wrapper(func)
 
     return decorator
 
@@ -153,15 +168,19 @@ def sql_fetch_scalars(res_type: Type[TR], sql: str | None = None):
     ]:
         decoder = _make_scalar_decoder(res_type)
 
-        async def wrapper(
-            conn: ConnectionOrCursor, *args: F_Spec.args, **kwargs: F_Spec.kwargs
-        ) -> list[TR]:
-            if sql_and_params := req_sql_n_params(func, args, kwargs, sql):
-                q_res = await conn.execute(*sql_and_params)
-                return [decoder(row[0]) async for row in q_res]
-            return []
+        class wrapper(WrapperBase):
+            async def __call__(
+                self,
+                conn: ConnectionOrCursor,
+                *args: F_Spec.args,
+                **kwargs: F_Spec.kwargs,
+            ) -> list[TR]:
+                if sql_and_params := req_sql_n_params(self._func, args, kwargs, sql):
+                    q_res = await conn.execute(*sql_and_params)
+                    return [decoder(row[0]) async for row in q_res]
+                return []
 
-        return wrapper
+        return wrapper(func)
 
     return decorator
 
@@ -210,13 +229,19 @@ def sql_execute(  # type: ignore
         ) -> Callable[
             Concatenate[ConnectionOrCursor, F_Spec], Coroutine[Any, Any, None]
         ]:
-            async def wrapper(
-                conn: ConnectionOrCursor, *args: F_Spec.args, **kwargs: F_Spec.kwargs
-            ) -> None:
-                if sql_and_params := req_sql_n_params(func, args, kwargs, sql):
-                    await conn.execute(*sql_and_params)
+            class wrapper(WrapperBase):
+                async def __call__(
+                    self,
+                    conn: ConnectionOrCursor,
+                    *args: F_Spec.args,
+                    **kwargs: F_Spec.kwargs,
+                ) -> None:
+                    if sql_and_params := req_sql_n_params(
+                        self._func, args, kwargs, sql
+                    ):
+                        await conn.execute(*sql_and_params)
 
-            return wrapper
+            return wrapper(func)
 
         return decorator
 

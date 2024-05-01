@@ -2,7 +2,8 @@ from typing import Type, Callable, ParamSpec, TypeVar, Any, Coroutine, Concatena
 from typing import overload
 from aiomysql import Connection
 
-from noorm._db_api_2 import PrepareFuncResult, req_sql_n_params
+from .._common import WrapperBase
+from .._db_api_2 import PrepareFuncResult, req_sql_n_params
 
 F_Spec = ParamSpec("F_Spec")
 F_Return = TypeVar("F_Return")
@@ -27,21 +28,22 @@ def sql_fetch_all(row_type: Type[TR], sql: str | None = None):
     def decorator(
         func: Callable[F_Spec, PrepareFuncResult | None]
     ) -> Callable[Concatenate[Connection, F_Spec], Coroutine[Any, Any, list[TR]]]:
-        async def wrapper(
-            conn: Connection, *args: F_Spec.args, **kwargs: F_Spec.kwargs
-        ) -> list[TR]:
-            if sql_and_params := req_sql_n_params(func, args, kwargs, sql):
-                async with conn.cursor() as cur:
-                    await cur.execute(*sql_and_params)
-                    col_names = tuple(el[0] for el in cur.description)
-                    res: list[TR] = [
-                        row_type(**{n: v for n, v in zip(col_names, r)})
-                        async for r in cur
-                    ]
-                    return res
-            return []
+        class wrapper(WrapperBase):
+            async def __call__(
+                self, conn: Connection, *args: F_Spec.args, **kwargs: F_Spec.kwargs
+            ) -> list[TR]:
+                if sql_and_params := req_sql_n_params(self._func, args, kwargs, sql):
+                    async with conn.cursor() as cur:
+                        await cur.execute(*sql_and_params)
+                        col_names = tuple(el[0] for el in cur.description)
+                        res: list[TR] = [
+                            row_type(**{n: v for n, v in zip(col_names, r)})
+                            async for r in cur
+                        ]
+                        return res
+                return []
 
-        return wrapper
+        return wrapper(func)
 
     return decorator
 
@@ -64,19 +66,20 @@ def sql_one_or_none(row_type: Type[TR], sql: str | None = None):
     def decorator(
         func: Callable[F_Spec, PrepareFuncResult | None]
     ) -> Callable[Concatenate[Connection, F_Spec], Coroutine[Any, Any, TR | None]]:
-        async def wrapper(
-            conn: Connection, *args: F_Spec.args, **kwargs: F_Spec.kwargs
-        ) -> TR | None:
-            if sql_and_params := req_sql_n_params(func, args, kwargs, sql):
-                async with conn.cursor() as cur:
-                    await cur.execute(*sql_and_params)
-                    col_names = tuple(el[0] for el in cur.description)
-                    row = await cur.fetchone()
-                    if row is not None:
-                        return row_type(**{n: v for n, v in zip(col_names, row)})
-            return None
+        class wrapper(WrapperBase):
+            async def __call__(
+                self, conn: Connection, *args: F_Spec.args, **kwargs: F_Spec.kwargs
+            ) -> TR | None:
+                if sql_and_params := req_sql_n_params(self._func, args, kwargs, sql):
+                    async with conn.cursor() as cur:
+                        await cur.execute(*sql_and_params)
+                        col_names = tuple(el[0] for el in cur.description)
+                        row = await cur.fetchone()
+                        if row is not None:
+                            return row_type(**{n: v for n, v in zip(col_names, row)})
+                return None
 
-        return wrapper
+        return wrapper(func)
 
     return decorator
 
@@ -100,18 +103,19 @@ def sql_scalar_or_none(res_type: Type[TR], sql: str | None = None):
     def decorator(
         func: Callable[F_Spec, PrepareFuncResult | None]
     ) -> Callable[Concatenate[Connection, F_Spec], Coroutine[Any, Any, TR | None]]:
-        async def wrapper(
-            conn: Connection, *args: F_Spec.args, **kwargs: F_Spec.kwargs
-        ) -> TR | None:
-            if sql_and_params := req_sql_n_params(func, args, kwargs, sql):
-                async with conn.cursor() as cur:
-                    await cur.execute(*sql_and_params)
-                    row = await cur.fetchone()
-                    if row is not None:
-                        return row[0]
-            return None
+        class wrapper(WrapperBase):
+            async def __call__(
+                self, conn: Connection, *args: F_Spec.args, **kwargs: F_Spec.kwargs
+            ) -> TR | None:
+                if sql_and_params := req_sql_n_params(self._func, args, kwargs, sql):
+                    async with conn.cursor() as cur:
+                        await cur.execute(*sql_and_params)
+                        row = await cur.fetchone()
+                        if row is not None:
+                            return row[0]
+                return None
 
-        return wrapper
+        return wrapper(func)
 
     return decorator
 
@@ -136,16 +140,17 @@ def sql_fetch_scalars(res_type: Type[TR], sql: str | None = None):
     def decorator(
         func: Callable[F_Spec, PrepareFuncResult | None]
     ) -> Callable[Concatenate[Connection, F_Spec], Coroutine[Any, Any, list[TR]]]:
-        async def wrapper(
-            conn: Connection, *args: F_Spec.args, **kwargs: F_Spec.kwargs
-        ) -> list[TR]:
-            if sql_and_params := req_sql_n_params(func, args, kwargs, sql):
-                async with conn.cursor() as cur:
-                    await cur.execute(*sql_and_params)
-                    return [row[0] async for row in cur]
-            return []
+        class wrapper(WrapperBase):
+            async def __call__(
+                self, conn: Connection, *args: F_Spec.args, **kwargs: F_Spec.kwargs
+            ) -> list[TR]:
+                if sql_and_params := req_sql_n_params(self._func, args, kwargs, sql):
+                    async with conn.cursor() as cur:
+                        await cur.execute(*sql_and_params)
+                        return [row[0] async for row in cur]
+                return []
 
-        return wrapper
+        return wrapper(func)
 
     return decorator
 
@@ -192,14 +197,17 @@ def sql_execute(  # type: ignore
         def decorator(
             func: Callable[F_Spec, PrepareFuncResult | None]
         ) -> Callable[Concatenate[Connection, F_Spec], Coroutine[Any, Any, None]]:
-            async def wrapper(
-                conn: Connection, *args: F_Spec.args, **kwargs: F_Spec.kwargs
-            ) -> None:
-                if sql_and_params := req_sql_n_params(func, args, kwargs, sql):
-                    async with conn.cursor() as cur:
-                        await cur.execute(*sql_and_params)
+            class wrapper(WrapperBase):
+                async def __call__(
+                    self, conn: Connection, *args: F_Spec.args, **kwargs: F_Spec.kwargs
+                ) -> None:
+                    if sql_and_params := req_sql_n_params(
+                        self._func, args, kwargs, sql
+                    ):
+                        async with conn.cursor() as cur:
+                            await cur.execute(*sql_and_params)
 
-            return wrapper
+            return wrapper(func)
 
         return decorator
 

@@ -56,11 +56,15 @@ def get_all_users_namedtuple(do_cancel: bool):
 def test_fetch_all(session: Session):
     got = get_all_users_namedtuple(session, False)
     assert len(got) == 2
+    q = get_all_users_namedtuple.unwrapped(False)
+    assert str(q.compile()).startswith("SELECT users.id,")
     rtype = type(got[0])
     assert got == [rtype(1, "John"), rtype(2, "Jane")]
 
     got = get_all_users_namedtuple(session, True)
     assert got == []
+    with pytest.raises(nm.CancelExecException):
+        get_all_users_namedtuple.unwrapped(True)
 
 
 @nm.sql_fetch_all(namedtuple("AllUsersResult", "id,username"))
