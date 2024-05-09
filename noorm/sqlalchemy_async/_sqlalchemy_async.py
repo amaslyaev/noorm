@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from .._sqlalchemy_common import req_sql_n_params
 from .._common import WrapperBase
+from ..registry import MetricsCollector
 
 F_Spec = ParamSpec("F_Spec")
 F_Return = TypeVar("F_Return")
@@ -43,15 +44,19 @@ def sql_fetch_all(row_type: Type[TR], no_commit: bool = False):
             async def __call__(
                 self, session: AsyncSession, *args: F_Spec.args, **kwargs: F_Spec.kwargs
             ) -> list[TR]:
-                if (sql_stmt := req_sql_n_params(self._func, args, kwargs)) is not None:
-                    q_res = (await session.execute(sql_stmt)).all()
-                    await _commit_if_needed(session, sql_stmt, no_commit)
-                    res: list[TR] = [
-                        row_type(**{n: v for n, v in r._asdict().items()})
-                        for r in q_res
-                    ]
-                    return res
-                return []
+                with MetricsCollector(self._func) as mc:
+                    if (
+                        sql_stmt := req_sql_n_params(self._func, args, kwargs)
+                    ) is not None:
+                        q_res = (await session.execute(sql_stmt)).all()
+                        await _commit_if_needed(session, sql_stmt, no_commit)
+                        res: list[TR] = [
+                            row_type(**{n: v for n, v in r._asdict().items()})
+                            for r in q_res
+                        ]
+                        mc.tuples = len(res)
+                        return res
+                    return []
 
         return wrapper(func)
 
@@ -78,13 +83,17 @@ def sql_one_or_none(row_type: Type[TR], no_commit: bool = False):
             async def __call__(
                 self, session: AsyncSession, *args: F_Spec.args, **kwargs: F_Spec.kwargs
             ) -> TR | None:
-                if (sql_stmt := req_sql_n_params(self._func, args, kwargs)) is not None:
-                    q_res = (await session.execute(sql_stmt)).one_or_none()
-                    await _commit_if_needed(session, sql_stmt, no_commit)
-                    if q_res is None:
-                        return None
-                    return row_type(**{n: v for n, v in q_res._asdict().items()})
-                return None
+                with MetricsCollector(self._func) as mc:
+                    if (
+                        sql_stmt := req_sql_n_params(self._func, args, kwargs)
+                    ) is not None:
+                        q_res = (await session.execute(sql_stmt)).one_or_none()
+                        await _commit_if_needed(session, sql_stmt, no_commit)
+                        if q_res is None:
+                            return None
+                        mc.tuples = 1
+                        return row_type(**{n: v for n, v in q_res._asdict().items()})
+                    return None
 
         return wrapper(func)
 
@@ -113,11 +122,16 @@ def sql_scalar_or_none(res_type: Type[TR], no_commit: bool = False):
             async def __call__(
                 self, session: AsyncSession, *args: F_Spec.args, **kwargs: F_Spec.kwargs
             ) -> TR | None:
-                if (sql_stmt := req_sql_n_params(self._func, args, kwargs)) is not None:
-                    q_res = (await session.execute(sql_stmt)).scalar_one_or_none()
-                    await _commit_if_needed(session, sql_stmt, no_commit)
-                    return q_res
-                return None
+                with MetricsCollector(self._func) as mc:
+                    if (
+                        sql_stmt := req_sql_n_params(self._func, args, kwargs)
+                    ) is not None:
+                        q_res = (await session.execute(sql_stmt)).scalar_one_or_none()
+                        await _commit_if_needed(session, sql_stmt, no_commit)
+                        if q_res is not None:
+                            mc.tuples = 1
+                        return q_res
+                    return None
 
         return wrapper(func)
 
@@ -146,11 +160,16 @@ def sql_fetch_scalars(res_type: Type[TR], no_commit: bool = False):
             async def __call__(
                 self, session: AsyncSession, *args: F_Spec.args, **kwargs: F_Spec.kwargs
             ) -> list[TR]:
-                if (sql_stmt := req_sql_n_params(self._func, args, kwargs)) is not None:
-                    q_res = (await session.execute(sql_stmt)).scalars()
-                    await _commit_if_needed(session, sql_stmt, no_commit)
-                    return [el for el in q_res]
-                return []
+                with MetricsCollector(self._func) as mc:
+                    if (
+                        sql_stmt := req_sql_n_params(self._func, args, kwargs)
+                    ) is not None:
+                        q_res = (await session.execute(sql_stmt)).scalars()
+                        await _commit_if_needed(session, sql_stmt, no_commit)
+                        res = [el for el in q_res]
+                        mc.tuples = len(res)
+                        return res
+                    return []
 
         return wrapper(func)
 
@@ -205,11 +224,12 @@ def sql_execute(  # type: ignore
                     *args: F_Spec.args,
                     **kwargs: F_Spec.kwargs,
                 ) -> None:
-                    if (
-                        sql_stmt := req_sql_n_params(self._func, args, kwargs)
-                    ) is not None:
-                        await session.execute(sql_stmt)
-                        await _commit_if_needed(session, sql_stmt, no_commit)
+                    with MetricsCollector(self._func):
+                        if (
+                            sql_stmt := req_sql_n_params(self._func, args, kwargs)
+                        ) is not None:
+                            await session.execute(sql_stmt)
+                            await _commit_if_needed(session, sql_stmt, no_commit)
 
             return wrapper(func)
 

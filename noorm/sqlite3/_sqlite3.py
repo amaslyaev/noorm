@@ -7,6 +7,7 @@ from .._sqlite_common import (
     make_scalar_decoder as _make_scalar_decoder,
 )
 from .._db_api_2 import PrepareFuncResult, req_sql_n_params
+from ..registry import MetricsCollector
 
 F_Spec = ParamSpec("F_Spec")
 F_Return = TypeVar("F_Return")
@@ -38,15 +39,19 @@ def sql_fetch_all(row_type: Type[TR], sql: str | None = None):
                 *args: F_Spec.args,
                 **kwargs: F_Spec.kwargs,
             ) -> list[TR]:
-                if sql_and_params := req_sql_n_params(self._func, args, kwargs, sql):
-                    q_res = conn.execute(*sql_and_params)
-                    col_names = tuple(el[0] for el in q_res.description)
-                    res: list[TR] = [
-                        row_type(**decoder({n: v for n, v in zip(col_names, r)}))
-                        for r in q_res
-                    ]
-                    return res
-                return []
+                with MetricsCollector(self._func) as mc:
+                    if sql_and_params := req_sql_n_params(
+                        self._func, args, kwargs, sql
+                    ):
+                        q_res = conn.execute(*sql_and_params)
+                        col_names = tuple(el[0] for el in q_res.description)
+                        res: list[TR] = [
+                            row_type(**decoder({n: v for n, v in zip(col_names, r)}))
+                            for r in q_res
+                        ]
+                        mc.tuples = len(res)
+                        return res
+                    return []
 
         return wrapper(func)
 
@@ -77,14 +82,18 @@ def sql_one_or_none(row_type: Type[TR], sql: str | None = None):
                 *args: F_Spec.args,
                 **kwargs: F_Spec.kwargs,
             ) -> TR | None:
-                if sql_and_params := req_sql_n_params(self._func, args, kwargs, sql):
-                    q_res = conn.execute(*sql_and_params)
-                    col_names = tuple(el[0] for el in q_res.description)
-                    for row in q_res:
-                        return row_type(
-                            **decoder({n: v for n, v in zip(col_names, row)})
-                        )
-                return None
+                with MetricsCollector(self._func) as mc:
+                    if sql_and_params := req_sql_n_params(
+                        self._func, args, kwargs, sql
+                    ):
+                        q_res = conn.execute(*sql_and_params)
+                        col_names = tuple(el[0] for el in q_res.description)
+                        for row in q_res:
+                            mc.tuples = 1
+                            return row_type(
+                                **decoder({n: v for n, v in zip(col_names, row)})
+                            )
+                    return None
 
         return wrapper(func)
 
@@ -117,11 +126,15 @@ def sql_scalar_or_none(res_type: Type[TR], sql: str | None = None):
                 *args: F_Spec.args,
                 **kwargs: F_Spec.kwargs,
             ) -> TR | None:
-                if sql_and_params := req_sql_n_params(self._func, args, kwargs, sql):
-                    q_res = conn.execute(*sql_and_params)
-                    for row in q_res:
-                        return decoder(row[0])
-                return None
+                with MetricsCollector(self._func) as mc:
+                    if sql_and_params := req_sql_n_params(
+                        self._func, args, kwargs, sql
+                    ):
+                        q_res = conn.execute(*sql_and_params)
+                        for row in q_res:
+                            mc.tuples = 1
+                            return decoder(row[0])
+                    return None
 
         return wrapper(func)
 
@@ -154,10 +167,15 @@ def sql_fetch_scalars(res_type: Type[TR], sql: str | None = None):
                 *args: F_Spec.args,
                 **kwargs: F_Spec.kwargs,
             ) -> list[TR]:
-                if sql_and_params := req_sql_n_params(self._func, args, kwargs, sql):
-                    q_res = conn.execute(*sql_and_params)
-                    return [decoder(row[0]) for row in q_res]
-                return []
+                with MetricsCollector(self._func) as mc:
+                    if sql_and_params := req_sql_n_params(
+                        self._func, args, kwargs, sql
+                    ):
+                        q_res = conn.execute(*sql_and_params)
+                        res = [decoder(row[0]) for row in q_res]
+                        mc.tuples = len(res)
+                        return res
+                    return []
 
         return wrapper(func)
 
@@ -210,10 +228,11 @@ def sql_execute(  # type: ignore
                     *args: F_Spec.args,
                     **kwargs: F_Spec.kwargs,
                 ) -> None:
-                    if sql_and_params := req_sql_n_params(
-                        self._func, args, kwargs, sql
-                    ):
-                        conn.execute(*sql_and_params)
+                    with MetricsCollector(self._func):
+                        if sql_and_params := req_sql_n_params(
+                            self._func, args, kwargs, sql
+                        ):
+                            conn.execute(*sql_and_params)
 
             return wrapper(func)
 
