@@ -1,6 +1,7 @@
 [![PyPI pyversions](https://img.shields.io/pypi/pyversions/true-noorm.svg)](https://pypi.python.org/pypi/true-noorm/)
 [![PyPI status](https://img.shields.io/pypi/status/true-noorm.svg)](https://pypi.python.org/pypi/true-noorm/)
 [![GitHub license](https://img.shields.io/github/license/Naereen/StrapDown.js.svg)](https://github.com/amaslyaev/noorm/blob/master/LICENSE)
+[![codecov](https://codecov.io/gh/amaslyaev/noorm/graph/badge.svg?token=31YWXNHPMM)](https://codecov.io/gh/amaslyaev/noorm)
 [![Code style](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black/)
 
 ## noorm
