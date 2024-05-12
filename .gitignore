@@ -12,3 +12,6 @@ coverage.xml
 
 eval
 Dockerfile
+
+# poetry.lock is really not needed in this repo
+poetry.lock

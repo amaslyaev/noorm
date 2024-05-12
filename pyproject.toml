@@ -11,9 +11,15 @@ documentation = ""
 keywords = ["database", "sql", "orm", "noorm", "sqlite", "postgres", "postgresql", "mysql"]
 classifiers = [
     "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Database",
     "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
     "Development Status :: 4 - Beta",
-    "Programming Language :: Python :: 3"
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13"
 ]
 
 [tool.poetry.dependencies]

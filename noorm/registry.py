@@ -17,9 +17,7 @@ class Stat:
     duration: float = 0.0
     tuples: int = 0
     fails: int = 0
-    fails_by_error: defaultdict[str, int] = field(
-        default_factory=lambda: defaultdict(int)
-    )
+    fails_by_error: dict[str, int] = field(default_factory=dict)
 
 
 @dataclass(slots=True, frozen=True)
@@ -124,7 +122,9 @@ class Registry:
             stat.tuples += event.tuples
             if event.error:
                 stat.fails += 1
-                stat.fails_by_error[event.error] += 1
+                stat.fails_by_error[event.error] = (
+                    stat.fails_by_error.get(event.error, 0) + 1
+                )
 
             for callback in self._event_listeners:
                 try:
