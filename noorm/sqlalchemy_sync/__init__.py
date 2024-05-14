@@ -16,6 +16,11 @@ Decorator parameters are:
 - "No commit" flag. Default is False, so if executed statement is data manipulation
   (insert, update, or delete), commit will be automatically invoked. If you need
   to prevent it for some reason, set no_commit=True.
+- "synchronize_session" SqlAlchemy execution option. By default is False because
+  avoiding using persistent objects is one of the most crucial NoORM ideas. If no
+  persistent object in a session, there is nothing to synchronise. If you really need
+  different behavior, set this `sync_session` parameter to "fetch" or "evaluate", or
+  pass None to turn off the execution option manipulation.
 
 After decoration the decorated function receives an open Session as a first positional
 argument.

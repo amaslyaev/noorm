@@ -50,6 +50,7 @@ def test_funcs():
 
 
 def sideprocess_worker(res_queue: mp.Queue):
+    get_registry().init_multiprocess_registry()
     noop(None)
     with pytest.raises(ZeroDivisionError):
         noop(None, divide_by_zero=True)

@@ -24,12 +24,15 @@ async def _commit_if_needed(
         await session.commit()
 
 
-def sql_fetch_all(row_type: Type[TR], no_commit: bool = False):
+def sql_fetch_all(
+    row_type: Type[TR], no_commit: bool = False, sync_session: bool | str | None = False
+):
     """
     Use this decorator to make `.all()` queries.
 
     :param row_type: type of expected result. Usually some dataclass or named tuple
     :param no_commit: set to False to prevent commit after the DML execution.
+    :param sync_session: execution option `synchronize_session`. Default False.
 
     IMPORTANT: decorated function must not be async, but after decoration it
     becomes async.
@@ -46,7 +49,9 @@ def sql_fetch_all(row_type: Type[TR], no_commit: bool = False):
             ) -> list[TR]:
                 with MetricsCollector(self._func) as mc:
                     if (
-                        sql_stmt := req_sql_n_params(self._func, args, kwargs)
+                        sql_stmt := req_sql_n_params(
+                            self._func, args, kwargs, sync_session
+                        )
                     ) is not None:
                         q_res = (await session.execute(sql_stmt)).all()
                         await _commit_if_needed(session, sql_stmt, no_commit)
@@ -63,12 +68,15 @@ def sql_fetch_all(row_type: Type[TR], no_commit: bool = False):
     return decorator
 
 
-def sql_one_or_none(row_type: Type[TR], no_commit: bool = False):
+def sql_one_or_none(
+    row_type: Type[TR], no_commit: bool = False, sync_session: bool | str | None = False
+):
     """
     Use this decorator to make `.one_or_none()` queries.
 
     :param row_type: type of expected result. Usually some dataclass or named tuple
     :param no_commit: set to False to prevent commit after the DML execution.
+    :param sync_session: execution option `synchronize_session`. Default False.
 
     IMPORTANT: decorated function must not be async, but after decoration it
     becomes async.
@@ -85,7 +93,9 @@ def sql_one_or_none(row_type: Type[TR], no_commit: bool = False):
             ) -> TR | None:
                 with MetricsCollector(self._func) as mc:
                     if (
-                        sql_stmt := req_sql_n_params(self._func, args, kwargs)
+                        sql_stmt := req_sql_n_params(
+                            self._func, args, kwargs, sync_session
+                        )
                     ) is not None:
                         q_res = (await session.execute(sql_stmt)).one_or_none()
                         await _commit_if_needed(session, sql_stmt, no_commit)
@@ -100,7 +110,9 @@ def sql_one_or_none(row_type: Type[TR], no_commit: bool = False):
     return decorator
 
 
-def sql_scalar_or_none(res_type: Type[TR], no_commit: bool = False):
+def sql_scalar_or_none(
+    res_type: Type[TR], no_commit: bool = False, sync_session: bool | str | None = False
+):
     """
     Use this decorator to make a "scalar" SQL statement executor out of
     the function that prepares parameters for the query
@@ -108,6 +120,7 @@ def sql_scalar_or_none(res_type: Type[TR], no_commit: bool = False):
     :param res_type: type of expected result. For scalar queries it is usually `int`,
     `str`, `bool`, `datetime`, or whatever can be produced by scalar query.
     :param no_commit: set to False to prevent commit after the DML execution.
+    :param sync_session: execution option `synchronize_session`. Default False.
 
     IMPORTANT: decorated function must not be async, but after decoration it
     becomes async.
@@ -124,7 +137,9 @@ def sql_scalar_or_none(res_type: Type[TR], no_commit: bool = False):
             ) -> TR | None:
                 with MetricsCollector(self._func) as mc:
                     if (
-                        sql_stmt := req_sql_n_params(self._func, args, kwargs)
+                        sql_stmt := req_sql_n_params(
+                            self._func, args, kwargs, sync_session
+                        )
                     ) is not None:
                         q_res = (await session.execute(sql_stmt)).scalar_one_or_none()
                         await _commit_if_needed(session, sql_stmt, no_commit)
@@ -138,7 +153,9 @@ def sql_scalar_or_none(res_type: Type[TR], no_commit: bool = False):
     return decorator
 
 
-def sql_fetch_scalars(res_type: Type[TR], no_commit: bool = False):
+def sql_fetch_scalars(
+    res_type: Type[TR], no_commit: bool = False, sync_session: bool | str | None = False
+):
     """
     Use this decorator to make a "scalars" SQL statement executor out of
     the function that prepares parameters for the query
@@ -146,6 +163,7 @@ def sql_fetch_scalars(res_type: Type[TR], no_commit: bool = False):
     :param res_type: type of expected result. For scalar queries it is usually `int`,
     `str`, `bool`, `datetime`, or whatever can be produced by scalar query.
     :param no_commit: set to False to prevent commit after the DML execution.
+    :param sync_session: execution option `synchronize_session`. Default False.
 
     IMPORTANT: decorated function must not be async, but after decoration it
     becomes async.
@@ -162,7 +180,9 @@ def sql_fetch_scalars(res_type: Type[TR], no_commit: bool = False):
             ) -> list[TR]:
                 with MetricsCollector(self._func) as mc:
                     if (
-                        sql_stmt := req_sql_n_params(self._func, args, kwargs)
+                        sql_stmt := req_sql_n_params(
+                            self._func, args, kwargs, sync_session
+                        )
                     ) is not None:
                         q_res = (await session.execute(sql_stmt)).scalars()
                         await _commit_if_needed(session, sql_stmt, no_commit)
@@ -185,7 +205,7 @@ def sql_execute(
 
 @overload
 def sql_execute(
-    no_commit: bool = False,
+    no_commit: bool = False, sync_session: bool | str | None = False
 ) -> Callable[
     [Callable[F_Spec, Coroutine[Any, Any, None]]],
     Callable[Concatenate[AsyncSession, F_Spec], Coroutine[Any, Any, None]],
@@ -196,11 +216,13 @@ def sql_execute(
 def sql_execute(  # type: ignore
     func: Callable[F_Spec, Executable] | None = None,
     no_commit: bool = False,
+    sync_session: bool | str | None = False,
 ):
     """
     Use this decorator to execute a statement without responding a result.
 
     :param no_commit: set to False to prevent commit after the DML execution.
+    :param sync_session: execution option `synchronize_session`. Default False.
 
     IMPORTANT: decorated function must not be async, but after decoration it
     becomes async.
@@ -226,7 +248,9 @@ def sql_execute(  # type: ignore
                 ) -> None:
                     with MetricsCollector(self._func):
                         if (
-                            sql_stmt := req_sql_n_params(self._func, args, kwargs)
+                            sql_stmt := req_sql_n_params(
+                                self._func, args, kwargs, sync_session
+                            )
                         ) is not None:
                             await session.execute(sql_stmt)
                             await _commit_if_needed(session, sql_stmt, no_commit)
