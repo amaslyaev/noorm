@@ -2,7 +2,7 @@
 NoORM (Not Only ORM) helpers for pymysql
 """
 
-from typing import Type, Callable, ParamSpec, TypeVar, Concatenate, overload
+from typing import Type, Callable, Generator, ParamSpec, TypeVar, Concatenate, overload
 
 from pymysql import Connection
 
@@ -48,6 +48,45 @@ def sql_fetch_all(row_type: Type[TR], sql: str | None = None):
                             mc.tuples = len(res)
                             return res
                     return []
+
+        return wrapper(func)
+
+    return decorator
+
+
+def sql_iterate(row_type: Type[TR], sql: str | None = None):
+    """
+    Use this decorator to make a query and iterate through results. Be careful with
+    this feature and, if possible, use `sql_fetch_all` instead, because
+    `sql_fetch_all` gives you less possibilites to shoot your leg.
+
+    :param row_type: type of expected result. Usually some dataclass or named tuple
+    :param sql: SQL statement to execute. If None, the SQL statement must be provided
+    by decorated function.
+
+    More info in the noorm.pymysql docstring.
+    """
+
+    def decorator(
+        func: Callable[F_Spec, PrepareFuncResult | None]
+    ) -> Callable[Concatenate[Connection, F_Spec], Generator[TR, None, None]]:
+        class wrapper(WrapperBase):
+            def __call__(
+                self, conn, *args: F_Spec.args, **kwargs: F_Spec.kwargs
+            ) -> Generator[TR, None, None]:
+                with MetricsCollector(self._func) as mc:
+                    if sql_and_params := req_sql_n_params(
+                        self._func, args, kwargs, sql
+                    ):
+                        with conn.cursor() as cur:
+                            cur.execute(*sql_and_params)
+                            col_names = tuple(el[0] for el in cur.description)
+                            is_first_row = True
+                            for r in cur:
+                                if is_first_row:
+                                    mc.finish(None)
+                                    is_first_row = False
+                                yield row_type(**{n: v for n, v in zip(col_names, r)})
 
         return wrapper(func)
 
@@ -159,6 +198,46 @@ def sql_fetch_scalars(res_type: Type[TR], sql: str | None = None):
                             mc.tuples = len(res)
                             return res
                     return []
+
+        return wrapper(func)
+
+    return decorator
+
+
+def sql_iterate_scalars(res_type: Type[TR], sql: str | None = None):
+    """
+    Use this decorator to make a query and iterate through scalar results. Be careful
+    with this feature and, if possible, use `sql_fetch_scalars` instead, because
+    `sql_fetch_scalars` gives you less possibilites to shoot your leg.
+
+    :param res_type: type of expected result. For scalar queries it is usually `int`,
+    `str`, `bool`, `datetime`, or whatever can be produced in a single-column query
+    result.
+    :param sql: SQL statement to execute. If None, the SQL statement must be provided
+    by decorated function.
+
+    More info in the noorm.pymysql docstring.
+    """
+
+    def decorator(
+        func: Callable[F_Spec, PrepareFuncResult | None]
+    ) -> Callable[Concatenate[Connection, F_Spec], Generator[TR, None, None]]:
+        class wrapper(WrapperBase):
+            def __call__(
+                self, conn, *args: F_Spec.args, **kwargs: F_Spec.kwargs
+            ) -> Generator[TR, None, None]:
+                with MetricsCollector(self._func) as mc:
+                    if sql_and_params := req_sql_n_params(
+                        self._func, args, kwargs, sql
+                    ):
+                        with conn.cursor() as cur:
+                            cur.execute(*sql_and_params)
+                            is_first_row = True
+                            for r in cur:
+                                if is_first_row:
+                                    mc.finish(None)
+                                    is_first_row = False
+                                yield r[0]
 
         return wrapper(func)
 

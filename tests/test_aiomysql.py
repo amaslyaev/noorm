@@ -139,6 +139,24 @@ async def test_fetch_all_wrong(tst_conn: MockConn):
         _ = await get_all_users_wrong3(tst_conn, 1)
 
 
+# MARK: sql_iterate
+
+
+@nm.sql_iterate(namedtuple("AllUsersResult", "id,username"), get_all_users_fake_sql)
+def iter_users():
+    pass
+
+
+async def test_iter_users(tst_conn: MockConn):
+    gen = iter_users(tst_conn)
+    first = await anext(gen)
+    rtype = type(first)
+    assert first == rtype(1, "John")
+    assert await anext(gen) == rtype(2, "Jane")
+    with pytest.raises(StopAsyncIteration):
+        _ = await anext(gen)
+
+
 # MARK: sql_one_or_none
 
 
@@ -202,6 +220,27 @@ async def test_fetch_scalars(tst_conn: MockConn):
     assert got == [1, 2]
     got = await get_user_ids(tst_conn, True)
     assert got == []
+
+
+# MARK: sql_iterate_scalars
+
+
+@nm.sql_iterate_scalars(str, get_all_users_fake_sql)
+def iter_user_ids():
+    pass
+
+
+async def test_iter_usernames(tst_conn: MockConn):
+    gen = iter_user_ids(tst_conn)
+    assert await anext(gen) == 1
+    assert await anext(gen) == 2
+    with pytest.raises(StopAsyncIteration):
+        _ = await anext(gen)
+
+    got = []
+    async for v in iter_user_ids(tst_conn):
+        got.append(v)
+    assert got == [1, 2]
 
 
 # MARK: sql_execute

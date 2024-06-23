@@ -2,11 +2,18 @@
 NoORM adapter for synchronous SQLAlchemy.
 
 Decorators:
-- `sql_fetch_all(row_type: type, no_commit: bool)` to fetch records as a list
-- `sql_one_or_none(res_type: type, no_commit: bool)` to fetch one record
-- `sql_scalar_or_none(res_type: type, no_commit: bool)` to fetch a scalar
-- `sql_fetch_scalars(res_type: type, no_commit: bool)` to fetch a list of scalars
-- `sql_execute(no_commit: bool)` to execute a statement
+- `sql_fetch_all(row_type: type, no_commit: bool, sync_session: bool | str | None)`
+  to fetch records as a list
+- `sql_one_or_none(res_type: type, no_commit: bool, sync_session: bool | str | None)`
+  to fetch one record
+- `sql_scalar_or_none(res_type: type, no_commit: bool, sync_session: bool | str | None)`
+  to fetch a scalar
+- `sql_fetch_scalars(res_type: type, no_commit: bool, sync_session: bool | str | None)`
+  to fetch a list of scalars
+- `sql_execute(no_commit: bool, sync_session: bool | str | None)` to execute a statement
+- `sql_iterate(row_type: type, no_commit: bool, sync_session: bool | str | None)` and
+  `sql_iterate_scalars(row_type: type, no_commit: bool, sync_session: bool | str | None)`
+  to make a query and iterate through results, objects or scalars respectively.
 
 Decorator parameters are:
 - (except `sql_execute`) Expected result type. For `sql_fetch_all` and `sql_one_or_none`
@@ -59,22 +66,26 @@ def ins_user(username: str | None = None, email: str | None = None):
 
     ins_user(session, "Jane", "jane@example.com") # Commit is done automatically
 ```
-"""
+"""  # noqa: E501
 
 from ._sqlalchemy_sync import (
     sql_fetch_all,
+    sql_iterate,
     sql_one_or_none,
     sql_scalar_or_none,
     sql_fetch_scalars,
+    sql_iterate_scalars,
     sql_execute,
 )
 from noorm._common import CancelExecException
 
 __all__ = [
     "sql_fetch_all",
+    "sql_iterate",
     "sql_one_or_none",
     "sql_scalar_or_none",
     "sql_fetch_scalars",
+    "sql_iterate_scalars",
     "sql_execute",
     "CancelExecException",
 ]

@@ -141,6 +141,27 @@ def test_fetch_find(tst_conn: sqlite3.Connection):
     assert got == []
 
 
+# MARK: sql_iterate
+
+
+@nm.sql_iterate(
+    namedtuple("AllUsersResult", "id,username"),
+    "select rowid as id, username from users order by rowid",
+)
+def iter_users():
+    pass
+
+
+def test_iter_users(tst_conn: sqlite3.Connection):
+    gen = iter_users(tst_conn)
+    first = next(gen)
+    rtype = type(first)
+    assert first == rtype(1, "John")
+    assert next(gen) == rtype(2, "Jane")
+    with pytest.raises(StopIteration):
+        _ = next(gen)
+
+
 # MARK: sql_one_or_none
 
 
@@ -202,7 +223,7 @@ def test_scalar_or_none(tst_conn: sqlite3.Connection):
     assert get_random_user_id(tst_conn, 999) is None
 
 
-# MARK: nm.sql_fetch_scalars
+# MARK: sql_fetch_scalars
 
 
 @nm.sql_fetch_scalars(int, "select rowid from users;")
@@ -245,6 +266,23 @@ def test_fetch_scalars(tst_conn: sqlite3.Connection):
     assert got == [1, 2]
     got = get_user_ids_search(tst_conn, "")
     assert got == []
+
+
+# MARK: sql_iterate_scalars
+
+
+@nm.sql_iterate_scalars(str, "select username from users order by rowid")
+def iter_usernames():
+    pass
+
+
+def test_iter_usernames(tst_conn: sqlite3.Connection):
+    gen = iter_usernames(tst_conn)
+    assert next(gen) == "John"
+    assert next(gen) == "Jane"
+    with pytest.raises(StopIteration):
+        _ = next(gen)
+    assert list(iter_usernames(tst_conn)) == ["John", "Jane"]
 
 
 # MARK: sql_execute

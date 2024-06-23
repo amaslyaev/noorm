@@ -84,6 +84,24 @@ def test_fetch_all_wrong(session: Session):
         _ = get_all_users_wrong2(session, 1)
 
 
+# MARK: sql_iterate
+
+
+@nm.sql_iterate(namedtuple("AllUsersResult", "id,username"))
+def iter_users():
+    return sa.select(User.id, User.username).order_by(User.id)
+
+
+def test_iter_users(session: Session):
+    gen = iter_users(session)
+    first = next(gen)
+    rtype = type(first)
+    assert first == rtype(1, "John")
+    assert next(gen) == rtype(2, "Jane")
+    with pytest.raises(StopIteration):
+        _ = next(gen)
+
+
 # MARK: sql_one_or_none
 
 
@@ -160,6 +178,23 @@ def test_fetch_scalars(session: Session):
     assert got == [1, 2]
     got = get_user_ids(session, True)
     assert got == []
+
+
+# MARK: sql_iterate_scalars
+
+
+@nm.sql_iterate_scalars(str, "select username from users order by rowid")
+def iter_usernames():
+    return sa.select(User.username).order_by(User.id)
+
+
+def test_iter_usernames(session: Session):
+    gen = iter_usernames(session)
+    assert next(gen) == "John"
+    assert next(gen) == "Jane"
+    with pytest.raises(StopIteration):
+        _ = next(gen)
+    assert list(iter_usernames(session)) == ["John", "Jane"]
 
 
 # MARK: sql_execute

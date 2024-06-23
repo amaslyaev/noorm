@@ -81,6 +81,24 @@ async def test_fetch_all_wrong(session: AsyncSession):
         _ = await get_all_users_wrong2(session, 1)
 
 
+# MARK: sql_iterate
+
+
+@nm.sql_iterate(namedtuple("AllUsersResult", "id,username"))
+def iter_users():
+    return sa.select(User.id, User.username).order_by(User.id)
+
+
+async def test_iter_users(session: AsyncSession):
+    gen = iter_users(session)
+    first = await anext(gen)
+    rtype = type(first)
+    assert first == rtype(1, "John")
+    assert await anext(gen) == rtype(2, "Jane")
+    with pytest.raises(StopAsyncIteration):
+        _ = await anext(gen)
+
+
 # MARK: sql_one_or_none
 
 
@@ -157,6 +175,27 @@ async def test_fetch_scalars(session: AsyncSession):
     assert got == [1, 2]
     got = await get_user_ids(session, True)
     assert got == []
+
+
+# MARK: sql_iterate_scalars
+
+
+@nm.sql_iterate_scalars(str, "select username from users order by rowid")
+def iter_usernames():
+    return sa.select(User.username).order_by(User.id)
+
+
+async def test_iter_usernames(session: AsyncSession):
+    gen = iter_usernames(session)
+    assert await anext(gen) == "John"
+    assert await anext(gen) == "Jane"
+    with pytest.raises(StopAsyncIteration):
+        _ = await anext(gen)
+
+    got = []
+    async for v in iter_usernames(session):
+        got.append(v)
+    assert got == ["John", "Jane"]
 
 
 # MARK: sql_execute

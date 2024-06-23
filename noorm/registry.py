@@ -141,25 +141,30 @@ class MetricsCollector:
         self.registry = get_registry()
         self.func = func
         self.tuples = 0
+        self.start_time: float | None = None
+
+    def finish(self, exc_type: type | None) -> None:
+        if self.start_time is not None:
+            duration = perf_counter() - self.start_time
+            self.start_time = None
+            self.registry.on_event(
+                FuncCallEvent(
+                    (
+                        self.registry.name_by_func.get(self.func)
+                        or self.registry.register(self.func)
+                    ),
+                    duration,
+                    self.tuples,
+                    None if exc_type is None else exc_type.__name__,
+                )
+            )
 
     def __enter__(self):
-        self.start = perf_counter()
+        self.start_time = perf_counter()
         return self
 
     def __exit__(self, exc_type: type | None, exc_value, traceback) -> None:
-        duration = perf_counter() - self.start
-        self.registry.on_event(
-            FuncCallEvent(
-                (
-                    self.registry.name_by_func.get(self.func)
-                    or self.registry.register(self.func)
-                ),
-                duration,
-                self.tuples,
-                None if exc_type is None else exc_type.__name__,
-            )
-        )
-        pass
+        self.finish(exc_type)
 
 
 @lru_cache

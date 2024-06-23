@@ -7,6 +7,9 @@ Decorators:
 - `sql_scalar_or_none(res_type: type, sql: str)` to fetch a scalar
 - `sql_fetch_scalars(res_type: type, sql: str)` to fetch a list of scalars
 - `sql_execute(sql: str)` to execute a statement
+- `sql_iterate(row_type: type, sql: str)` and
+  `sql_iterate_scalars(row_type: type, sql: str)` to make a query and iterate
+  through results, objects or scalars respectively.
 
 Decorator parameters are:
 - (except `sql_execute`) Expected result type. For `sql_fetch_all` and `sql_one_or_none`
@@ -86,9 +89,11 @@ async with aiosqlite.connect("test.sqlite") as conn:
 
 from ._aiosqlite import (
     sql_fetch_all,
+    sql_iterate,
     sql_one_or_none,
     sql_scalar_or_none,
     sql_fetch_scalars,
+    sql_iterate_scalars,
     sql_execute,
 )
 from noorm._db_api_2 import params, query_and_params, query_only
@@ -96,9 +101,11 @@ from noorm._common import CancelExecException
 
 __all__ = [
     "sql_fetch_all",
+    "sql_iterate",
     "sql_one_or_none",
     "sql_scalar_or_none",
     "sql_fetch_scalars",
+    "sql_iterate_scalars",
     "sql_execute",
     "params",
     "query_and_params",

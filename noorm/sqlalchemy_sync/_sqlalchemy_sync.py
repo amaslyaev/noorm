@@ -2,7 +2,7 @@
 NoORM (Not Only ORM) helpers for synchronous sqlalchemy
 """
 
-from typing import Type, Callable, ParamSpec, TypeVar, overload, Concatenate
+from typing import Type, Callable, Generator, ParamSpec, TypeVar, overload, Concatenate
 
 from sqlalchemy.sql import Executable, Select
 from sqlalchemy.orm import Session as OrmSession, scoped_session
@@ -48,15 +48,57 @@ def sql_fetch_all(
                             self._func, args, kwargs, sync_session
                         )
                     ) is not None:
-                        q_res = session.execute(sql_stmt).all()
-                        _commit_if_needed(session, sql_stmt, no_commit)
+                        q_res = session.execute(sql_stmt)
                         res: list[TR] = [
                             row_type(**{n: v for n, v in r._asdict().items()})
                             for r in q_res
                         ]
+                        _commit_if_needed(session, sql_stmt, no_commit)
                         mc.tuples = len(res)
                         return res
                     return []
+
+        return wrapper(func)
+
+    return decorator
+
+
+def sql_iterate(
+    row_type: Type[TR], no_commit: bool = False, sync_session: bool | str | None = False
+):
+    """
+    Use this decorator to make a query and iterate through results. Be careful with
+    this feature and, if possible, use `sql_fetch_all` instead, because
+    `sql_fetch_all` gives you less possibilites to shoot your leg.
+
+    :param row_type: type of expected result. Usually some dataclass or named tuple
+    :param no_commit: set to False to prevent commit after the DML execution.
+    :param sync_session: execution option `synchronize_session`. Default False.
+
+    More info in the noorm.sqlalchemy_sync docstring.
+    """
+
+    def decorator(
+        func: Callable[F_Spec, Executable]
+    ) -> Callable[Concatenate[Session, F_Spec], Generator[TR, None, None]]:
+        class wrapper(WrapperBase):
+            def __call__(
+                self, session: Session, *args: F_Spec.args, **kwargs: F_Spec.kwargs
+            ) -> Generator[TR, None, None]:
+                with MetricsCollector(self._func) as mc:
+                    if (
+                        sql_stmt := req_sql_n_params(
+                            self._func, args, kwargs, sync_session
+                        )
+                    ) is not None:
+                        q_res = session.execute(sql_stmt)
+                        is_first_row = True
+                        for r in q_res:
+                            if is_first_row:
+                                mc.finish(None)
+                                is_first_row = False
+                            yield row_type(**{n: v for n, v in r._asdict().items()})
+                        _commit_if_needed(session, sql_stmt, no_commit)
 
         return wrapper(func)
 
@@ -171,11 +213,54 @@ def sql_fetch_scalars(
                         )
                     ) is not None:
                         q_res = session.execute(sql_stmt).scalars()
-                        _commit_if_needed(session, sql_stmt, no_commit)
                         res = [el for el in q_res]
+                        _commit_if_needed(session, sql_stmt, no_commit)
                         mc.tuples = len(res)
                         return res
                     return []
+
+        return wrapper(func)
+
+    return decorator
+
+
+def sql_iterate_scalars(
+    res_type: Type[TR], no_commit: bool = False, sync_session: bool | str | None = False
+):
+    """
+    Use this decorator to make a query and iterate through scalar results. Be careful
+    with this feature and, if possible, use `sql_fetch_scalars` instead, because
+    `sql_fetch_scalars` gives you less possibilites to shoot your leg.
+
+    :param res_type: type of expected result. For scalar queries it is usually `int`,
+    `str`, `bool`, `datetime`, or whatever can be produced by scalar query.
+    :param no_commit: set to False to prevent commit after the DML execution.
+    :param sync_session: execution option `synchronize_session`. Default False.
+
+    More info in the noorm.sqlalchemy_sync docstring.
+    """
+
+    def decorator(
+        func: Callable[F_Spec, Executable]
+    ) -> Callable[Concatenate[Session, F_Spec], Generator[TR, None, None]]:
+        class wrapper(WrapperBase):
+            def __call__(
+                self, session: Session, *args: F_Spec.args, **kwargs: F_Spec.kwargs
+            ) -> Generator[TR, None, None]:
+                with MetricsCollector(self._func) as mc:
+                    if (
+                        sql_stmt := req_sql_n_params(
+                            self._func, args, kwargs, sync_session
+                        )
+                    ) is not None:
+                        q_res = session.execute(sql_stmt).scalars()
+                        is_first_row = True
+                        for r in q_res:
+                            if is_first_row:
+                                mc.finish(None)
+                                is_first_row = False
+                            yield r
+                        _commit_if_needed(session, sql_stmt, no_commit)
 
         return wrapper(func)
 

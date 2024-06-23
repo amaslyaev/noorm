@@ -1,4 +1,5 @@
-from typing import Type, Callable, ParamSpec, TypeVar, Any, Coroutine, Concatenate
+from typing import Type, Callable, AsyncGenerator, ParamSpec, TypeVar, Concatenate
+from typing import Coroutine, Any
 from typing import overload
 import aiosqlite
 
@@ -58,6 +59,55 @@ def sql_fetch_all(row_type: Type[TR], sql: str | None = None):
                         mc.tuples = len(res)
                         return res
                     return []
+
+        return wrapper(func)
+
+    return decorator
+
+
+def sql_iterate(row_type: Type[TR], sql: str | None = None):
+    """
+    Use this decorator to make a query and iterate through results. Be careful with
+    this feature and, if possible, use `sql_fetch_all` instead, because
+    `sql_fetch_all` gives you less possibilites to shoot your leg.
+
+    :param row_type: type of expected result. Usually some dataclass or named tuple
+    :param sql: SQL statement to execute. If None, the SQL statement must be provided
+    by decorated function.
+
+    IMPORTANT: decorated function must not be async, but after decoration it
+    becomes async.
+
+    More info in the noorm.aiosqlite docstring.
+    """
+
+    def decorator(
+        func: Callable[F_Spec, PrepareFuncResult | None]
+    ) -> Callable[Concatenate[aiosqlite.Connection, F_Spec], AsyncGenerator[TR, None]]:
+        decoder = _make_decoder(row_type)
+
+        class wrapper(WrapperBase):
+            async def __call__(
+                self,
+                conn: aiosqlite.Connection,
+                *args: F_Spec.args,
+                **kwargs: F_Spec.kwargs,
+            ) -> AsyncGenerator[TR, None]:
+                with MetricsCollector(self._func) as mc:
+                    if sql_and_params := req_sql_n_params(
+                        self._func, args, kwargs, sql
+                    ):
+                        cur = await conn.cursor()
+                        q_res = await cur.execute(*sql_and_params)
+                        col_names = tuple(el[0] for el in q_res.description)
+                        is_first_row = True
+                        async for r in q_res:
+                            if is_first_row:
+                                mc.finish(None)
+                                is_first_row = False
+                            yield row_type(
+                                **decoder({n: v for n, v in zip(col_names, r)})
+                            )
 
         return wrapper(func)
 
@@ -197,6 +247,51 @@ def sql_fetch_scalars(res_type: Type[TR], sql: str | None = None):
                         mc.tuples = len(res)
                         return res
                     return []
+
+        return wrapper(func)
+
+    return decorator
+
+
+def sql_iterate_scalars(res_type: Type[TR], sql: str | None = None):
+    """
+    Use this decorator to make a query and iterate through scalar results. Be careful
+    with this feature and, if possible, use `sql_fetch_scalars` instead, because
+    `sql_fetch_scalars` gives you less possibilites to shoot your leg.
+
+    :param res_type: type of expected result. For scalar queries it is usually `int`,
+    `str`, `bool`, `datetime`, or whatever can be produced in a single-column query
+    result. Use Any to return values without conversion.
+    :param sql: SQL statement to execute. If None, the SQL statement must be provided
+    by decorated function.
+
+    More info in the noorm.aiosqlite docstring.
+    """
+
+    def decorator(
+        func: Callable[F_Spec, PrepareFuncResult | None]
+    ) -> Callable[Concatenate[aiosqlite.Connection, F_Spec], AsyncGenerator[TR, None]]:
+        decoder = _make_scalar_decoder(res_type)
+
+        class wrapper(WrapperBase):
+            async def __call__(
+                self,
+                conn: aiosqlite.Connection,
+                *args: F_Spec.args,
+                **kwargs: F_Spec.kwargs,
+            ) -> AsyncGenerator[TR, None]:
+                with MetricsCollector(self._func) as mc:
+                    if sql_and_params := req_sql_n_params(
+                        self._func, args, kwargs, sql
+                    ):
+                        cur = await conn.cursor()
+                        q_res = await cur.execute(*sql_and_params)
+                        is_first_row = True
+                        async for r in q_res:
+                            if is_first_row:
+                                mc.finish(None)
+                                is_first_row = False
+                            yield decoder(r[0])
 
         return wrapper(func)
 

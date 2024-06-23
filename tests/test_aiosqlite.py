@@ -141,6 +141,27 @@ async def test_fetch_find(tst_conn: aiosqlite.Connection):
     assert got == []
 
 
+# MARK: sql_iterate
+
+
+@nm.sql_iterate(
+    namedtuple("AllUsersResult", "id,username"),
+    "select rowid as id, username from users order by rowid",
+)
+def iter_users():
+    pass
+
+
+async def test_iter_users(tst_conn: aiosqlite.Connection):
+    gen = iter_users(tst_conn)
+    first = await anext(gen)
+    rtype = type(first)
+    assert first == rtype(1, "John")
+    assert await anext(gen) == rtype(2, "Jane")
+    with pytest.raises(StopAsyncIteration):
+        _ = await anext(gen)
+
+
 # MARK: sql_one_or_none
 
 
@@ -246,6 +267,27 @@ async def test_fetch_scalars(tst_conn: aiosqlite.Connection):
     assert got == [1, 2]
     got = await get_user_ids_search(tst_conn, "")
     assert got == []
+
+
+# MARK: sql_iterate_scalars
+
+
+@nm.sql_iterate_scalars(str, "select username from users order by rowid")
+def iter_usernames():
+    pass
+
+
+async def test_iter_usernames(tst_conn: aiosqlite.Connection):
+    gen = iter_usernames(tst_conn)
+    assert await anext(gen) == "John"
+    assert await anext(gen) == "Jane"
+    with pytest.raises(StopAsyncIteration):
+        _ = await anext(gen)
+
+    got = []
+    async for v in iter_usernames(tst_conn):
+        got.append(v)
+    assert got == ["John", "Jane"]
 
 
 # MARK: sql_execute

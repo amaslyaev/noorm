@@ -45,6 +45,7 @@ After importing "nm" you use `@nm.sql_...` decorators to create functions that p
 - **@nm.sql_scalar_or_none** – to get a scalar or None if nothing is found.
 - **@nm.sql_fetch_scalars** – to get a list of scalars.
 - **@nm.sql_execute** – to execute something, usually INSERT, UPDATE, or DELETE.
+- **@nm.sql_iterate** and **@nm.sql_iterate_scalars** – to make a query and iterate through results – objects or scalars respectively. Be careful with this features and, if possible, use `sql_fetch_all` and `sql_fetch_scalars` instead, because they give you less possibilites to shoot your leg. These functions are not implemented for **asyncpg**.
 
 Usage of these decorators in different submodules and underlying databases might have own peculiarities, so check docstring documentation of the chosen "nm".
 
@@ -174,6 +175,7 @@ async def main():
 2. Naming:
    - Prefix classes returned from DB API functions with "Db". For instance, use "DbUsers", "DbOrders", "DbOrdersWithDetails", "DbInvoicesReportLine".
    - Prefix functions that SELECT data from the DB with "get_". For example, "get_user_by_id", "get_orders_by_user", etc.
+   - Use prefix "iter_" for DB API functions made using `@nm.sql_iterate` and `@nm.sql_iterate_scalars` decorators.
    - For data manipulation functions:
      - Use prefixes "ins_", "upd_", "del_" for INSERTs, UPDATEs, DELETEs respectively.
      - Employ "upsert_" for upsert operations.
@@ -225,6 +227,11 @@ if __name__ == "__main__":
     uvicorn.run("main:app", port=5000, workers=3, log_level="info")
 ```
 Consequently, all DB operations occurring in child processes will be aggregated in the MainProcess registry.
+
+**Important**: statistics for `@nm.sql_iterate` and `@nm.sql_iterate_scalars` is not precise:
+1. `stat.duration` is counted only for query execution and first row extraction.
+2. `stat.tuples` is always zero.
+3. `stat.fails` and `stat.fails_by_error` do not counter errors that might happen after successful first row extraction.
 
 #### Executing unwrapped functions
 
