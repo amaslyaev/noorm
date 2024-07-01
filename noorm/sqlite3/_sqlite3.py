@@ -5,8 +5,9 @@ from .._common import WrapperBase
 from .._sqlite_common import (
     make_decoder as _make_decoder,
     make_scalar_decoder as _make_scalar_decoder,
+    sqlite_sql_n_params,
 )
-from .._db_api_2 import PrepareFuncResult, req_sql_n_params
+from .._db_api_2 import PrepareFuncResult
 from ..registry import MetricsCollector
 
 F_Spec = ParamSpec("F_Spec")
@@ -40,7 +41,7 @@ def sql_fetch_all(row_type: Type[TR], sql: str | None = None):
                 **kwargs: F_Spec.kwargs,
             ) -> list[TR]:
                 with MetricsCollector(self._func) as mc:
-                    if sql_and_params := req_sql_n_params(
+                    if sql_and_params := sqlite_sql_n_params(
                         self._func, args, kwargs, sql
                     ):
                         q_res = conn.execute(*sql_and_params)
@@ -84,7 +85,7 @@ def sql_iterate(row_type: Type[TR], sql: str | None = None):
                 **kwargs: F_Spec.kwargs,
             ) -> Generator[TR, None, None]:
                 with MetricsCollector(self._func) as mc:
-                    if sql_and_params := req_sql_n_params(
+                    if sql_and_params := sqlite_sql_n_params(
                         self._func, args, kwargs, sql
                     ):
                         cur = conn.cursor()
@@ -129,7 +130,7 @@ def sql_one_or_none(row_type: Type[TR], sql: str | None = None):
                 **kwargs: F_Spec.kwargs,
             ) -> TR | None:
                 with MetricsCollector(self._func) as mc:
-                    if sql_and_params := req_sql_n_params(
+                    if sql_and_params := sqlite_sql_n_params(
                         self._func, args, kwargs, sql
                     ):
                         q_res = conn.execute(*sql_and_params)
@@ -173,7 +174,7 @@ def sql_scalar_or_none(res_type: Type[TR], sql: str | None = None):
                 **kwargs: F_Spec.kwargs,
             ) -> TR | None:
                 with MetricsCollector(self._func) as mc:
-                    if sql_and_params := req_sql_n_params(
+                    if sql_and_params := sqlite_sql_n_params(
                         self._func, args, kwargs, sql
                     ):
                         q_res = conn.execute(*sql_and_params)
@@ -214,7 +215,7 @@ def sql_fetch_scalars(res_type: Type[TR], sql: str | None = None):
                 **kwargs: F_Spec.kwargs,
             ) -> list[TR]:
                 with MetricsCollector(self._func) as mc:
-                    if sql_and_params := req_sql_n_params(
+                    if sql_and_params := sqlite_sql_n_params(
                         self._func, args, kwargs, sql
                     ):
                         q_res = conn.execute(*sql_and_params)
@@ -256,7 +257,7 @@ def sql_iterate_scalars(res_type: Type[TR], sql: str | None = None):
                 **kwargs: F_Spec.kwargs,
             ) -> Generator[TR, None, None]:
                 with MetricsCollector(self._func) as mc:
-                    if sql_and_params := req_sql_n_params(
+                    if sql_and_params := sqlite_sql_n_params(
                         self._func, args, kwargs, sql
                     ):
                         cur = conn.cursor()
@@ -320,7 +321,7 @@ def sql_execute(  # type: ignore
                     **kwargs: F_Spec.kwargs,
                 ) -> None:
                     with MetricsCollector(self._func):
-                        if sql_and_params := req_sql_n_params(
+                        if sql_and_params := sqlite_sql_n_params(
                             self._func, args, kwargs, sql
                         ):
                             conn.execute(*sql_and_params)

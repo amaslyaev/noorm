@@ -184,6 +184,72 @@ def test_one_or_none(tst_conn: sqlite3.Connection):
     assert user_info is None
 
 
+CollParamsRes = namedtuple("CollParamsRes", "s1,i1,s2")
+
+
+@nm.sql_one_or_none(CollParamsRes)
+def get_coll_params_res(sql, params):
+    if isinstance(params, dict):
+        return nm.query_and_params(sql, **params)
+    else:
+        return nm.query_and_params(sql, *params)
+
+
+@pytest.mark.parametrize(
+    "sql, params, expected",
+    (
+        (
+            """select '"hi" :ids' as s1, max(rowid) as i1, :pstr as s2
+            from users where rowid in (:ids)""",
+            {"ids": [1, 2, 100], "pstr": "'; drop table users;"},
+            CollParamsRes('"hi" :ids', 2, "'; drop table users;"),
+        ),
+        (
+            """select '-- not a comment' as s1, max(rowid) as i1, '"' as s2
+            from users where rowid in (:ids) and rowid <> :idskeep""",
+            {"ids": [1, 2, 100], "idskeep": 2},
+            CollParamsRes("-- not a comment", 1, '"'),
+        ),
+        (
+            """select "'hi' ?" as s1, max(rowid) as i1, ? as s2 -- works?
+            from users where rowid in (?) and ? = 'okey?'""",
+            ["'; drop table users;", set([1, 2, 100]), "okey?"],
+            CollParamsRes("'hi' ?", 2, "'; drop table users;"),
+        ),
+        ("select ? as s1, ? as i1, ? as s2", [1, Ellipsis, 1], TypeError),
+        ("select ? as s1, ? as i1, ? as s2", [1, ([],), 1], TypeError),
+        ("select :par1 as s1, 1 as i1, '-' as s2", {"par1": Ellipsis}, TypeError),
+        (
+            "select '-' as s1, 1 as i1, '-' as s2 where 1 in (:par1)",
+            {"par1": [1, 2, 3]},
+            CollParamsRes("-", 1, "-"),
+        ),
+        (
+            "select '-' as s1, 1 as i1, '-' as s2 where 1 in (:par1)",
+            {"par1": [1, (2,), 3]},
+            TypeError,
+        ),
+        (
+            "select ? as s1, ? as i1, ? as s2",
+            (True, date(2024, 1, 2), datetime(2024, 1, 2, 3, 4, 5)),
+            CollParamsRes(1, "2024-01-02", "2024-01-02 03:04:05"),
+        ),
+        (
+            "select ? as s1, ? as i1, ? as s2",
+            (False, Decimal("1.2345"), None),
+            CollParamsRes(0, "1.2345", None),
+        ),
+    ),
+)
+def test_collection_params(tst_conn: sqlite3.Connection, sql, params, expected):
+    if expected == TypeError:
+        with pytest.raises(expected):
+            _ = get_coll_params_res(tst_conn, sql, params)
+    else:
+        got = get_coll_params_res(tst_conn, sql, params)
+        assert got == expected
+
+
 # MARK: sql_scalar_or_none
 
 

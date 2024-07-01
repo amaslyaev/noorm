@@ -38,6 +38,17 @@ Decorated function should return:
   - `query_and_params(sql: str, *args, **kwargs)` to provide both - a query and its
     parameters.
 
+SQLite-specific features:
+1. You can use `date`, `datetime`, `bool`, `Decimal` fields in query result dataclasses.
+   Conversion will be done automatically.
+2. You can also pass values of these types as parameters. They will be converted to
+   SQLite-acceptable types automatically. Date and datetime become TEXT in ISO format,
+   booleans become INTEGER, Decimal becomes TEXT.
+3. Although SQLite engine does not accept collections as parameter values, here you can
+   do it. That is especially useful in `WHERE ... IN (?)` conditions. Such parameter
+   can be any kind if plain collection: tuple, list, set, etc., but not dict. See
+   the `get_several_users` example below.
+
 Examples:
 ```
 from collections import namedtuple
@@ -68,6 +79,14 @@ def get_one_user(rowid: int):
 )
 def get_num_users(search: str):
     return nm.params(search=f"%{search}%")
+
+# Fetch several users
+@nm.sql_fetch_all(
+    namedtuple("DbUsersResult", "id, username, email"),
+    "select rowid as id, username, email from users where rowid in (:ids);",
+)
+def get_several_users(ids: list[int]):
+    return nm.params(ids=ids)
 
 # Insert a new record
 @nm.sql_execute("insert into users(username, email) values(?, ?)")

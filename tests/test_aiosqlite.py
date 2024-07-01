@@ -184,6 +184,38 @@ async def test_one_or_none(tst_conn: aiosqlite.Connection):
     assert user_info is None
 
 
+CollParamsRes = namedtuple("CollParamsRes", "s1,i1,s2")
+
+
+@nm.sql_one_or_none(CollParamsRes)
+def get_coll_params_res(sql, params):
+    if isinstance(params, dict):
+        return nm.query_and_params(sql, **params)
+    else:
+        return nm.query_and_params(sql, *params)
+
+
+# Only basic check. Main unittest is in the test_sqlite3.py
+@pytest.mark.parametrize(
+    "sql, params, expected",
+    (
+        (
+            "select ? as s1, ? as i1, ? as s2 where ? in (?)",
+            [1, 2, 3, 4, [3, 4, 5]],
+            CollParamsRes(1, 2, 3),
+        ),
+        (
+            "select :p1 as s1, :p2 as i1, :p3 as s2 where :p4 in (:p5)",
+            {"p1": 1, "p2": 2, "p3": 3, "p4": 4, "p5": [3, 4, 5]},
+            CollParamsRes(1, 2, 3),
+        ),
+    ),
+)
+async def test_collection_params(tst_conn: aiosqlite.Connection, sql, params, expected):
+    got = await get_coll_params_res(tst_conn, sql, params)
+    assert got == expected
+
+
 # MARK: sql_scalar_or_none
 
 
