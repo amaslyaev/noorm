@@ -370,3 +370,27 @@ def test_ins_user(tst_conn: sqlite3.Connection):
     assert get_users_count(tst_conn) == 3
     del_user(tst_conn, "new@test.com")
     assert get_users_count(tst_conn) == 2
+
+
+# MARK: default_db
+
+
+@nm.default_db
+@nm.sql_scalar_or_none(int, "select count(*) from users where rowid <= ?")
+def get_count_def_db(max_id: int):
+    return nm.params(max_id)
+
+
+def test_def_db(tst_conn: sqlite3.Connection):
+    with pytest.raises(RuntimeError):
+        a = get_count_def_db(2)
+    with nm.set_default_db(tst_conn):
+        a = get_count_def_db(2)
+        assert a == 2
+        with nm.set_default_db(None):
+            with pytest.raises(RuntimeError):
+                a = get_count_def_db(2)
+        a = get_count_def_db(2)
+        assert a == 2
+    with pytest.raises(RuntimeError):
+        a = get_count_def_db(2)

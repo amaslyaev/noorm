@@ -10,6 +10,8 @@ Decorators:
 - `sql_iterate(row_type: type, sql: str)` and
   `sql_iterate_scalars(row_type: type, sql: str)` to make a query and iterate
   through results, objects or scalars respectively.
+- `default_db` additional decorartor to make your DB API functions a bit easier to use.
+  Check the `noorm.sqlite3.default_db` docstring for descriprion and examples.
 
 Decorator parameters are:
 - (except `sql_execute`) Expected result type. For `sql_fetch_all` and `sql_one_or_none`
@@ -112,6 +114,8 @@ from ._sqlite3 import (
     sql_fetch_scalars,
     sql_iterate_scalars,
     sql_execute,
+    default_db,
+    set_default_db,
 )
 from noorm._db_api_2 import params, query_and_params, query_only
 from noorm._common import CancelExecException
@@ -124,6 +128,8 @@ __all__ = [
     "sql_fetch_scalars",
     "sql_iterate_scalars",
     "sql_execute",
+    "default_db",
+    "set_default_db",
     "params",
     "query_and_params",
     "query_only",

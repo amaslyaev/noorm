@@ -335,3 +335,83 @@ def sql_execute(  # type: ignore
         return wrap_decorator(the_func)
     else:
         return wrap_decorator
+
+
+class set_default_db:
+    """
+    Use `nm.set_default_db(your_connection)` as a function or as a context manager
+    to set your "default" DB connection before first usage of function decorated with
+    the `@nm.default_db` decorator.
+    """
+
+    _conns: list[sqlite3.Connection | None] = []
+
+    def __init__(self, conn: sqlite3.Connection) -> None:
+        if not self._conns:
+            self._conns.append(None)
+        self.prev = self._conns[-1]
+        self._conns[-1] = conn
+
+    def __enter__(self) -> None:
+        curr = self._conns[-1]
+        self._conns[-1] = self.prev
+        self._conns.append(curr)
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self._conns.pop()
+
+
+def default_db(
+    func: Callable[Concatenate[ConnectionOrCursor, F_Spec], F_Return]
+) -> Callable[F_Spec, F_Return]:
+    """
+    The `@nm.default_db` decorator makes your DB API functions easier to use by
+    removing the first mandatory `ConnectionOrCursor` argument.
+
+    Use this decorator before other `@nm.sql_...` decorators.
+
+    Example:
+    ```
+    import sqlite3
+    import noorm.sqlite3 as nm
+
+    @nm.default_db
+    @nm.sql_scalar_or_none(int, "select count(*) from users")
+    def get_users_count():
+        pass
+
+    with sqlite3.connect("my_db.sqlite") as conn, nm.set_default_db(conn):
+        users_count = get_users_count()  # <<< Consider no "conn" parameter
+        print(f"{users_count=}")
+    ```
+    Without `nm.set_default_db(conn)` any call to `get_users_count` would fail with a
+    runtime error "default_db is not set".
+
+    You can use `nm.set_default_db` as a function. This code also works:
+    ```
+    conn = sqlite3.connect("my_db.sqlite")
+    nm.set_default_db(conn)
+    users_count = get_users_count()
+    ```
+    The `nm.set_default_db` context can be nested:
+    ```
+    conn1 = sqlite3.connect("my_db_1.sqlite")
+    conn2 = sqlite3.connect("my_db_2.sqlite")
+    with nm.set_default_db(conn1):
+        print(f"Users count in my_db_1: {get_users_count()}")
+        with nm.set_default_db(conn2):  # <<< Temporary set conn2 as a default_db
+            print(f"Users count in my_db_2: {get_users_count()}")
+        print(f"Check again users count in my_db_1: {get_users_count()}")
+    ```
+    """
+
+    def wrapper(*args: F_Spec.args, **kwargs: F_Spec.kwargs) -> F_Return:
+        if not set_default_db._conns or (conn := set_default_db._conns[-1]) is None:
+            raise RuntimeError(
+                "default_db is not set. Use nm.set_default_db() to set default DB "
+                "connection before the first usage of function decorated "
+                "with @nm.default_db"
+            )
+        return func(conn, *args, **kwargs)
+
+    return wrapper
