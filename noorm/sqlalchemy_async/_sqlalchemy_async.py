@@ -13,7 +13,6 @@ from .._common import WrapperBase
 from ..registry import MetricsCollector
 
 F_Spec = ParamSpec("F_Spec")
-F_Return = TypeVar("F_Return")
 TR = TypeVar("TR")
 
 

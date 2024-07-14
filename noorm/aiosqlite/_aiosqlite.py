@@ -13,7 +13,6 @@ from .._db_api_2 import PrepareFuncResult
 from ..registry import MetricsCollector
 
 F_Spec = ParamSpec("F_Spec")
-F_Return = TypeVar("F_Return")
 TR = TypeVar("TR")
 ConnectionOrCursor = aiosqlite.Connection | aiosqlite.Cursor
 

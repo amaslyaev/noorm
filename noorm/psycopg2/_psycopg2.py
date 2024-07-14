@@ -10,7 +10,6 @@ from .._db_api_2 import PrepareFuncResult, req_sql_n_params
 from ..registry import MetricsCollector
 
 F_Spec = ParamSpec("F_Spec")
-F_Return = TypeVar("F_Return")
 TR = TypeVar("TR")
 Psycopg2Connection = Any
 

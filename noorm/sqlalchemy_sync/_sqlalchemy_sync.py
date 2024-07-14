@@ -12,7 +12,6 @@ from .._sqlalchemy_common import req_sql_n_params
 from ..registry import MetricsCollector
 
 F_Spec = ParamSpec("F_Spec")
-F_Return = TypeVar("F_Return")
 TR = TypeVar("TR")
 Session = OrmSession | scoped_session
 
