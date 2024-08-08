@@ -8,15 +8,23 @@ import re
 from ._db_api_2 import req_sql_n_params
 
 
-def _decode_date(val: str | None) -> date | None:
+def _decode_date(val: str | date | datetime | None) -> date | None:
     if val is None:
         return None
+    if isinstance(val, datetime):
+        return val.date()
+    if isinstance(val, date):
+        return val
     return date.fromisoformat(val)
 
 
-def _decode_datetime(val: str | None) -> datetime | None:
+def _decode_datetime(val: str | date | datetime | None) -> datetime | None:
     if val is None:
         return None
+    if isinstance(val, datetime):
+        return val
+    if isinstance(val, date):
+        return datetime(val.year, val.month, val.day)
     return datetime.fromisoformat(val)
 
 
@@ -27,6 +35,8 @@ def _as_is(val: Any) -> Any:
 def _as_is_val(type_: Type, val: Any) -> Any:
     if val is None:
         return None
+    if isinstance(val, type_):
+        return val
     return type_(val)
 
 
@@ -68,6 +78,8 @@ def _encode_val(val: Any) -> Any:
         return val.isoformat()
     elif isinstance(val, Decimal):
         return str(val)
+    elif getattr(type(val), "__conform__", None) is not None:
+        return val
     return ...
 
 

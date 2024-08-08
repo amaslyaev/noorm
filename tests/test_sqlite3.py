@@ -394,3 +394,64 @@ def test_def_db(tst_conn: sqlite3.Connection):
         assert a == 2
     with pytest.raises(RuntimeError):
         a = get_count_def_db(2)
+
+
+# Conversions
+
+
+@dataclass
+class Point:
+    x: float
+    y: float
+
+    def __conform__(self, protocol):
+        if protocol is sqlite3.PrepareProtocol:
+            return f"{self.x};{self.y}"
+
+
+def convert_point(s):
+    coord = map(float, s.split(b";"))
+    return Point(*coord)
+
+
+@dataclass
+class ConvRes:
+    p: Point
+    d1: date
+    d2: datetime
+    dt1: date
+    dt2: datetime
+
+
+@nm.sql_execute("INSERT INTO test(p, d1, d2, dt1, dt2) VALUES(?, ?, ?, ?, ?)")
+def ins_converted(p, d1, d2, dt1, dt2):
+    return nm.params(p, d1, d2, dt1, dt2)
+
+
+@nm.sql_one_or_none(ConvRes, "select * from test limit 1")
+def get_converted():
+    pass
+
+
+def test_conversions():
+    sqlite3.register_converter("point", convert_point)
+    conn = sqlite3.connect(":memory:", detect_types=sqlite3.PARSE_DECLTYPES)
+    conn.execute(
+        "CREATE TABLE test(p point, d1 date, d2 date, dt1 timestamp, dt2 timestamp)"
+    )
+    d1, d2 = date(2024, 1, 22), date(2024, 1, 23)
+    dt1, dt2 = datetime(2024, 1, 24, 3, 44, 55), datetime(2024, 1, 25, 3, 44, 55)
+    ins_converted(conn, Point(1.23, 3.45), d1, d2, dt1, dt2)
+    conn.commit()
+
+    got = get_converted(conn)
+    assert got == ConvRes(
+        p=Point(1.23, 3.45),
+        d1=d1,
+        d2=datetime(2024, 1, 23, 0, 0),
+        dt1=date(2024, 1, 24),
+        dt2=dt2,
+    )
+
+    with pytest.raises(TypeError):
+        ins_converted(conn, UData(1, "."), d1, d2, dt1, dt2)
