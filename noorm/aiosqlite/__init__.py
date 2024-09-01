@@ -29,14 +29,16 @@ IMPORTANT: decorated function must NOT be async, but after decoration it becomes
 Decorated function should return:
 - `None` if no changes to original sql statement is needed,
   and no params to be applied
-- Use `params`, `query_only`, or `query_and_params` functions to return accordingly
-  parameters values, SQL statement, or both together.
+- Use `nm.params`, `nm.query_only`, or `nm.query_and_params` functions to return
+  accordingly parameters values, SQL statement, or both together.
   - `params(*args, **kwargs)` to pass positional arguments for `?`-style placeholders
     or keyword arguments for named query parameter placeholders. SQL statement is
     original from decorator parameter.
   - `query_only(sql: str)` - only SQL query and no query parameters.
   - `query_and_params(sql: str, *args, **kwargs)` to provide both - a query and its
     parameters.
+- `nm.PARAMS_APPLY_POSITIONAL` or `nm.PARAMS_APPLY_NAMED` in case you want to simply
+  pass function parameters to the query as accordingly positional or named parameters.
 
 SQLite-specific features:
 1. You can use `date`, `datetime`, `bool`, `Decimal` fields in query result dataclasses.
@@ -86,12 +88,12 @@ def get_num_users(search: str):
     "select rowid as id, username, email from users where rowid in (:ids);",
 )
 def get_several_users(ids: list[int]):
-    return nm.params(ids=ids)
+    return nm.PARAMS_APPLY_NAMED
 
 # Insert a new record
 @nm.sql_execute("insert into users(username, email) values(?, ?)")
 def ins_user(username: str | None = None, email: str | None = None):
-    return nm.params(username, email)
+    return nm.PARAMS_APPLY_POSITIONAL
 
 # Usage:
 async with aiosqlite.connect("test.sqlite") as conn:
@@ -117,6 +119,7 @@ from ._aiosqlite import (
 )
 from noorm._db_api_2 import params, query_and_params, query_only
 from noorm._common import CancelExecException
+from noorm._common import PARAMS_APPLY_POSITIONAL, PARAMS_APPLY_NAMED
 
 __all__ = [
     "sql_fetch_all",
@@ -130,4 +133,6 @@ __all__ = [
     "query_and_params",
     "query_only",
     "CancelExecException",
+    "PARAMS_APPLY_POSITIONAL",
+    "PARAMS_APPLY_NAMED",
 ]

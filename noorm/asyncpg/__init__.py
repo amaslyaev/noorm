@@ -24,11 +24,13 @@ IMPORTANT: decorated function must not be async, but after decoration it becomes
 Decorated function should return:
 - `None` if no changes to original sql statement is needed,
   and no params to be applied
-- Use `params`, `query_only`, or `query_and_params` functions to return accordingly
-  parameters values, adjusted statement, or both these things together.
+- Use `nm.params`, `nm.query_only`, or `nm.query_and_params` functions to return
+  accordingly parameters values, adjusted statement, or both these things together.
   - `params(*args)` to pass parameters.
   - `query_only(sql: str)` - no query parameters, but another query instead of original.
   - `query_and_params(sql: str, *args)` to provide both - a new query and parameters.
+- `nm.PARAMS_APPLY_POSITIONAL` in case you want to simply pass function parameters
+  to the query as positional parameters.
 
 Examples:
 ```
@@ -61,7 +63,7 @@ def get_num_users(search: str):
 # Insert a new record
 @nm.sql_execute("insert into users(username, email) values($1, $2)")
 def ins_user(username: str | None = None, email: str | None = None):
-    return nm.params(username, email)
+    return nm.PARAMS_APPLY_POSITIONAL
 
 # Usage:
 conn = await asyncpg.connect('postgresql://postgres@localhost/test')
@@ -87,6 +89,7 @@ from ._asyncpg import (
 )
 from noorm._db_api_2_args_only import params, query_and_params, query_only
 from noorm._common import CancelExecException
+from noorm._common import PARAMS_APPLY_POSITIONAL
 
 __all__ = [
     "sql_fetch_all",
@@ -98,4 +101,5 @@ __all__ = [
     "query_and_params",
     "query_only",
     "CancelExecException",
+    "PARAMS_APPLY_POSITIONAL",
 ]

@@ -2,7 +2,7 @@ from typing import Type, Callable, AsyncGenerator, ParamSpec, TypeVar, Any, Coro
 from typing import Concatenate, overload
 from aiomysql import Connection
 
-from .._common import WrapperBase
+from .._common import WrapperBase, ParamsAutoEnum
 from .._db_api_2 import PrepareFuncResult, req_sql_n_params
 from ..registry import MetricsCollector
 
@@ -26,7 +26,7 @@ def sql_fetch_all(row_type: Type[TR], sql: str | None = None):
     """
 
     def decorator(
-        func: Callable[F_Spec, PrepareFuncResult | None]
+        func: Callable[F_Spec, PrepareFuncResult | ParamsAutoEnum | None]
     ) -> Callable[Concatenate[Connection, F_Spec], Coroutine[Any, Any, list[TR]]]:
         class wrapper(WrapperBase):
             async def __call__(
@@ -69,7 +69,7 @@ def sql_iterate(row_type: Type[TR], sql: str | None = None):
     """
 
     def decorator(
-        func: Callable[F_Spec, PrepareFuncResult | None]
+        func: Callable[F_Spec, PrepareFuncResult | ParamsAutoEnum | None]
     ) -> Callable[Concatenate[Connection, F_Spec], AsyncGenerator[TR, None]]:
         class wrapper(WrapperBase):
             async def __call__(
@@ -110,7 +110,7 @@ def sql_one_or_none(row_type: Type[TR], sql: str | None = None):
     """
 
     def decorator(
-        func: Callable[F_Spec, PrepareFuncResult | None]
+        func: Callable[F_Spec, PrepareFuncResult | ParamsAutoEnum | None]
     ) -> Callable[Concatenate[Connection, F_Spec], Coroutine[Any, Any, TR | None]]:
         class wrapper(WrapperBase):
             async def __call__(
@@ -153,7 +153,7 @@ def sql_scalar_or_none(res_type: Type[TR], sql: str | None = None):
     """
 
     def decorator(
-        func: Callable[F_Spec, PrepareFuncResult | None]
+        func: Callable[F_Spec, PrepareFuncResult | ParamsAutoEnum | None]
     ) -> Callable[Concatenate[Connection, F_Spec], Coroutine[Any, Any, TR | None]]:
         class wrapper(WrapperBase):
             async def __call__(
@@ -194,7 +194,7 @@ def sql_fetch_scalars(res_type: Type[TR], sql: str | None = None):
     """
 
     def decorator(
-        func: Callable[F_Spec, PrepareFuncResult | None]
+        func: Callable[F_Spec, PrepareFuncResult | ParamsAutoEnum | None]
     ) -> Callable[Concatenate[Connection, F_Spec], Coroutine[Any, Any, list[TR]]]:
         class wrapper(WrapperBase):
             async def __call__(
@@ -235,7 +235,7 @@ def sql_iterate_scalars(res_type: Type[TR], sql: str | None = None):
     """
 
     def decorator(
-        func: Callable[F_Spec, PrepareFuncResult | None]
+        func: Callable[F_Spec, PrepareFuncResult | ParamsAutoEnum | None]
     ) -> Callable[Concatenate[Connection, F_Spec], AsyncGenerator[TR, None]]:
         class wrapper(WrapperBase):
             async def __call__(
@@ -261,7 +261,7 @@ def sql_iterate_scalars(res_type: Type[TR], sql: str | None = None):
 
 @overload
 def sql_execute(
-    func: Callable[F_Spec, PrepareFuncResult | None]
+    func: Callable[F_Spec, PrepareFuncResult | ParamsAutoEnum | None]
 ) -> Callable[Concatenate[Connection, F_Spec], Coroutine[Any, Any, None]]:
     pass  # pragma: no cover
 
@@ -277,7 +277,7 @@ def sql_execute(
 
 
 def sql_execute(  # type: ignore
-    sql: Callable[F_Spec, PrepareFuncResult | None] | str | None = None
+    sql: Callable[F_Spec, PrepareFuncResult | ParamsAutoEnum | None] | str | None = None
 ):
     """
     Use this decorator to execute a statement without responding a result.
@@ -299,7 +299,7 @@ def sql_execute(  # type: ignore
 
     def decorator_wrapper(sql: str | None):
         def decorator(
-            func: Callable[F_Spec, PrepareFuncResult | None]
+            func: Callable[F_Spec, PrepareFuncResult | ParamsAutoEnum | None]
         ) -> Callable[Concatenate[Connection, F_Spec], Coroutine[Any, Any, None]]:
             class wrapper(WrapperBase):
                 async def __call__(

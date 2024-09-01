@@ -6,6 +6,7 @@ from unittest.mock import AsyncMock, call
 import pytest
 
 import noorm.asyncpg as nm
+from noorm._common import PARAMS_APPLY_NAMED
 
 
 @pytest.fixture
@@ -98,6 +99,30 @@ def get_all_users_wrong3(id_: int):
 async def test_fetch_all_wrong(tst_conn: AsyncMock):
     with pytest.raises(RuntimeError):
         _ = await get_all_users_wrong3(tst_conn, 1)
+
+
+@nm.sql_fetch_all(namedtuple("AllUsersResult", "id,username"), get_all_users_fake_sql)
+def get_user_by_named_params(username: str, min_salary: int = 0):
+    return PARAMS_APPLY_NAMED
+
+
+@nm.sql_fetch_all(namedtuple("AllUsersResult", "id,username"), get_all_users_fake_sql)
+def get_user_by_pos_params(username: str, min_salary: int = 0):
+    return nm.PARAMS_APPLY_POSITIONAL
+
+
+async def test_fetch_apply_params(tst_conn: AsyncMock):
+    with pytest.raises(ValueError):
+        await get_user_by_named_params(tst_conn, "John", 100)
+
+    await get_user_by_pos_params(tst_conn, min_salary=100, username="John")
+    assert tst_conn.fetch.call_args == call(get_all_users_fake_sql, "John", 100)
+
+    await get_user_by_pos_params(tst_conn, "John")
+    assert tst_conn.fetch.call_args == call(get_all_users_fake_sql, "John", 0)
+
+    await get_user_by_pos_params(tst_conn, "John", min_salary=100)
+    assert tst_conn.fetch.call_args == call(get_all_users_fake_sql, "John", 100)
 
 
 # MARK: sql_one_or_none

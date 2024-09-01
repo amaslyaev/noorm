@@ -5,7 +5,7 @@ NoORM (Not Only ORM) helpers for psycopg2
 from typing import Type, Callable, Generator, ParamSpec, TypeVar, Concatenate
 from typing import Any, overload
 
-from .._common import WrapperBase
+from .._common import WrapperBase, ParamsAutoEnum
 from .._db_api_2 import PrepareFuncResult, req_sql_n_params
 from ..registry import MetricsCollector
 
@@ -27,7 +27,7 @@ def sql_fetch_all(row_type: Type[TR], sql: str | None = None):
     """
 
     def decorator(
-        func: Callable[F_Spec, PrepareFuncResult | None]
+        func: Callable[F_Spec, PrepareFuncResult | ParamsAutoEnum | None]
     ) -> Callable[Concatenate[Psycopg2Connection, F_Spec], list[TR]]:
         class wrapper(WrapperBase):
             def __call__(
@@ -67,7 +67,7 @@ def sql_iterate(row_type: Type[TR], sql: str | None = None):
     """
 
     def decorator(
-        func: Callable[F_Spec, PrepareFuncResult | None]
+        func: Callable[F_Spec, PrepareFuncResult | ParamsAutoEnum | None]
     ) -> Callable[Concatenate[Psycopg2Connection, F_Spec], Generator[TR, None, None]]:
         class wrapper(WrapperBase):
             def __call__(
@@ -105,7 +105,7 @@ def sql_one_or_none(row_type: Type[TR], sql: str | None = None):
     """
 
     def decorator(
-        func: Callable[F_Spec, PrepareFuncResult | None],
+        func: Callable[F_Spec, PrepareFuncResult | ParamsAutoEnum | None],
     ) -> Callable[Concatenate[Psycopg2Connection, F_Spec], TR | None]:
         class wrapper(WrapperBase):
             def __call__(
@@ -144,7 +144,7 @@ def sql_scalar_or_none(res_type: Type[TR], sql: str | None = None):
     """
 
     def decorator(
-        func: Callable[F_Spec, PrepareFuncResult | None],
+        func: Callable[F_Spec, PrepareFuncResult | ParamsAutoEnum | None],
     ) -> Callable[Concatenate[Psycopg2Connection, F_Spec], TR | None]:
         class wrapper(WrapperBase):
             def __call__(
@@ -181,7 +181,7 @@ def sql_fetch_scalars(res_type: Type[TR], sql: str | None = None):
     """
 
     def decorator(
-        func: Callable[F_Spec, PrepareFuncResult | None]
+        func: Callable[F_Spec, PrepareFuncResult | ParamsAutoEnum | None]
     ) -> Callable[Concatenate[Psycopg2Connection, F_Spec], list[TR]]:
         class wrapper(WrapperBase):
             def __call__(
@@ -219,7 +219,7 @@ def sql_iterate_scalars(res_type: Type[TR], sql: str | None = None):
     """
 
     def decorator(
-        func: Callable[F_Spec, PrepareFuncResult | None]
+        func: Callable[F_Spec, PrepareFuncResult | ParamsAutoEnum | None]
     ) -> Callable[Concatenate[Psycopg2Connection, F_Spec], Generator[TR, None, None]]:
         class wrapper(WrapperBase):
             def __call__(
@@ -245,7 +245,7 @@ def sql_iterate_scalars(res_type: Type[TR], sql: str | None = None):
 
 @overload
 def sql_execute(
-    func: Callable[F_Spec, PrepareFuncResult | None]
+    func: Callable[F_Spec, PrepareFuncResult | ParamsAutoEnum | None]
 ) -> Callable[Concatenate[Psycopg2Connection, F_Spec], None]:
     pass  # pragma: no cover
 
@@ -260,7 +260,9 @@ def sql_execute(
 
 
 def sql_execute(  # type: ignore
-    sql: Callable[F_Spec, PrepareFuncResult | None] | str | None = None,
+    sql: (
+        Callable[F_Spec, PrepareFuncResult | ParamsAutoEnum | None] | str | None
+    ) = None,
 ):
     """
     Use this decorator to execute a statement without responding a result
@@ -280,7 +282,7 @@ def sql_execute(  # type: ignore
 
     def decorator_wrapper(sql: str | None):
         def decorator(
-            func: Callable[F_Spec, PrepareFuncResult | None],
+            func: Callable[F_Spec, PrepareFuncResult | ParamsAutoEnum | None],
         ) -> Callable[Concatenate[Psycopg2Connection, F_Spec], None]:
             class wrapper(WrapperBase):
                 def __call__(

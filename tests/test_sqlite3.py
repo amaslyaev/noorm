@@ -141,6 +141,45 @@ def test_fetch_find(tst_conn: sqlite3.Connection):
     assert got == []
 
 
+@dataclass
+class UData:
+    id: int
+    username: str
+
+
+@nm.sql_fetch_all(
+    UData,
+    """select rowid as id, username
+    from users where username=:username and cast(salary as integer) > :min_salary""",
+)
+def get_user_by_named_params(username: str, min_salary: int = 0):
+    return nm.PARAMS_APPLY_NAMED
+
+
+@nm.sql_fetch_all(
+    UData,
+    """select rowid as id, username
+    from users where username=? and cast(salary as integer) > ?""",
+)
+def get_user_by_pos_params(username: str, min_salary: int = 0):
+    return nm.PARAMS_APPLY_POSITIONAL
+
+
+def test_params_apply(tst_conn: sqlite3.Connection):
+    assert get_user_by_named_params(tst_conn, "John", 100) == [
+        UData(id=1, username="John")
+    ]
+    assert get_user_by_named_params(tst_conn, "John") == [UData(id=1, username="John")]
+    assert get_user_by_named_params(tst_conn, "John", min_salary=100000) == []
+    assert get_user_by_pos_params(tst_conn, min_salary=100, username="John") == [
+        UData(id=1, username="John")
+    ]
+    assert get_user_by_pos_params(tst_conn, "John") == [UData(id=1, username="John")]
+    assert get_user_by_pos_params(tst_conn, "John", min_salary=100) == [
+        UData(id=1, username="John")
+    ]
+
+
 # MARK: sql_iterate
 
 
@@ -163,12 +202,6 @@ def test_iter_users(tst_conn: sqlite3.Connection):
 
 
 # MARK: sql_one_or_none
-
-
-@dataclass
-class UData:
-    id: int
-    username: str
 
 
 @nm.sql_one_or_none(UData, "select rowid as id, username from users where rowid=:id")

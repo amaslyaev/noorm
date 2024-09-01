@@ -3,7 +3,7 @@ from typing import Coroutine, Any
 from typing import overload
 import aiosqlite
 
-from .._common import WrapperBase
+from .._common import WrapperBase, ParamsAutoEnum
 from .._sqlite_common import (
     make_decoder as _make_decoder,
     make_scalar_decoder as _make_scalar_decoder,
@@ -33,7 +33,7 @@ def sql_fetch_all(row_type: Type[TR], sql: str | None = None):
     """
 
     def decorator(
-        func: Callable[F_Spec, PrepareFuncResult | None]
+        func: Callable[F_Spec, PrepareFuncResult | ParamsAutoEnum | None]
     ) -> Callable[
         Concatenate[ConnectionOrCursor, F_Spec], Coroutine[Any, Any, list[TR]]
     ]:
@@ -82,7 +82,7 @@ def sql_iterate(row_type: Type[TR], sql: str | None = None):
     """
 
     def decorator(
-        func: Callable[F_Spec, PrepareFuncResult | None]
+        func: Callable[F_Spec, PrepareFuncResult | ParamsAutoEnum | None]
     ) -> Callable[Concatenate[aiosqlite.Connection, F_Spec], AsyncGenerator[TR, None]]:
         decoder = _make_decoder(row_type)
 
@@ -130,7 +130,7 @@ def sql_one_or_none(row_type: Type[TR], sql: str | None = None):
     """
 
     def decorator(
-        func: Callable[F_Spec, PrepareFuncResult | None]
+        func: Callable[F_Spec, PrepareFuncResult | ParamsAutoEnum | None]
     ) -> Callable[
         Concatenate[ConnectionOrCursor, F_Spec], Coroutine[Any, Any, TR | None]
     ]:
@@ -179,7 +179,7 @@ def sql_scalar_or_none(res_type: Type[TR], sql: str | None = None):
     """
 
     def decorator(
-        func: Callable[F_Spec, PrepareFuncResult | None]
+        func: Callable[F_Spec, PrepareFuncResult | ParamsAutoEnum | None]
     ) -> Callable[
         Concatenate[ConnectionOrCursor, F_Spec], Coroutine[Any, Any, TR | None]
     ]:
@@ -225,7 +225,7 @@ def sql_fetch_scalars(res_type: Type[TR], sql: str | None = None):
     """
 
     def decorator(
-        func: Callable[F_Spec, PrepareFuncResult | None]
+        func: Callable[F_Spec, PrepareFuncResult | ParamsAutoEnum | None]
     ) -> Callable[
         Concatenate[ConnectionOrCursor, F_Spec], Coroutine[Any, Any, list[TR]]
     ]:
@@ -269,7 +269,7 @@ def sql_iterate_scalars(res_type: Type[TR], sql: str | None = None):
     """
 
     def decorator(
-        func: Callable[F_Spec, PrepareFuncResult | None]
+        func: Callable[F_Spec, PrepareFuncResult | ParamsAutoEnum | None]
     ) -> Callable[Concatenate[aiosqlite.Connection, F_Spec], AsyncGenerator[TR, None]]:
         decoder = _make_scalar_decoder(res_type)
 
@@ -300,7 +300,7 @@ def sql_iterate_scalars(res_type: Type[TR], sql: str | None = None):
 
 @overload
 def sql_execute(
-    func: Callable[F_Spec, PrepareFuncResult | None]
+    func: Callable[F_Spec, PrepareFuncResult | ParamsAutoEnum | None]
 ) -> Callable[Concatenate[ConnectionOrCursor, F_Spec], Coroutine[Any, Any, None]]:
     pass  # pragma: no cover
 
@@ -316,7 +316,7 @@ def sql_execute(
 
 
 def sql_execute(  # type: ignore
-    sql: Callable[F_Spec, PrepareFuncResult | None] | str | None = None
+    sql: Callable[F_Spec, PrepareFuncResult | ParamsAutoEnum | None] | str | None = None
 ):
     """
     Use this decorator to execute a statement without responding a result.
@@ -338,7 +338,7 @@ def sql_execute(  # type: ignore
 
     def decorator_wrapper(sql: str | None):
         def decorator(
-            func: Callable[F_Spec, PrepareFuncResult | None]
+            func: Callable[F_Spec, PrepareFuncResult | ParamsAutoEnum | None]
         ) -> Callable[
             Concatenate[ConnectionOrCursor, F_Spec], Coroutine[Any, Any, None]
         ]:
