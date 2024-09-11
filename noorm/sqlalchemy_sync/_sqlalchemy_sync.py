@@ -4,7 +4,8 @@ NoORM (Not Only ORM) helpers for synchronous sqlalchemy
 
 from typing import Type, Callable, Generator, ParamSpec, TypeVar, overload, Concatenate
 
-from sqlalchemy.sql import Executable, Select
+from sqlalchemy.sql import Executable
+from sqlalchemy.sql.selectable import GenerativeSelect
 from sqlalchemy.orm import Session as OrmSession, scoped_session
 
 from .._common import WrapperBase
@@ -17,7 +18,7 @@ Session = OrmSession | scoped_session
 
 
 def _commit_if_needed(session: Session, sql_stmt: Executable, no_commit: bool):
-    if not isinstance(sql_stmt, Select) and not no_commit:
+    if not isinstance(sql_stmt, GenerativeSelect) and not no_commit:
         session.commit()
 
 

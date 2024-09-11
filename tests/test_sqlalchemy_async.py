@@ -221,6 +221,11 @@ def delete_all_users():
     return sa.delete(User)
 
 
+@nm.sql_fetch_scalars(int)
+def get_nums():
+    return sa.union(sa.select(sa.literal(1)), sa.select(sa.literal(2)))
+
+
 @pytest.mark.parametrize("no_commit", (False, True))
 async def test_delete_user(session: AsyncSession, no_commit: bool):
     assert (await get_users_count(session)) == 2
@@ -233,6 +238,9 @@ async def test_delete_user(session: AsyncSession, no_commit: bool):
     else:
         await delete_user(session, 1)
     assert (await get_users_count(session)) == 1  # John is gone in this session
+
+    # Call to get_nums() should not cause commit
+    assert await get_nums(session) == [1, 2]
 
     await session.rollback()  # if no_commit == True, John is back
     assert (await get_users_count(session)) == (2 if no_commit else 1)

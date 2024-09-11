@@ -5,7 +5,8 @@ NoORM (Not Only ORM) helpers for asynchronous sqlalchemy
 from typing import Type, Callable, Coroutine, ParamSpec, TypeVar, Any, overload
 from typing import Concatenate, AsyncGenerator
 
-from sqlalchemy.sql import Executable, Select
+from sqlalchemy.sql import Executable
+from sqlalchemy.sql.selectable import GenerativeSelect
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .._sqlalchemy_common import req_sql_n_params
@@ -19,7 +20,7 @@ TR = TypeVar("TR")
 async def _commit_if_needed(
     session: AsyncSession, sql_stmt: Executable, no_commit: bool
 ):
-    if not isinstance(sql_stmt, Select) and not no_commit:
+    if not isinstance(sql_stmt, GenerativeSelect) and not no_commit:
         await session.commit()
 
 
