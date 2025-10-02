@@ -31,6 +31,13 @@ class WrapperBase:
     def unwrapped(self, *args, **kwargs):
         return self._func(*args, **kwargs)
 
+    def __get__(self, obj, objtype=None):
+        # If the function is an object or class method, here we inject `self` or `cls`
+        def _bound(*args, **kwargs):
+            return self(args[0], obj, *(args[1:]), **kwargs)
+
+        return _bound
+
 
 @lru_cache
 def _func_args_info(func):

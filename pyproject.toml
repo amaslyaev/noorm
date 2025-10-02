@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "true-noorm"
 packages = [{ include = "noorm" }]
-version = "0.1.7"
+version = "0.1.8"
 description = "NoORM (Not only ORM) - make your database operations convenient and natural"
 authors = ["Alexander Maslyeav <maslyaev@gmail.com>"]
 license = "MIT"

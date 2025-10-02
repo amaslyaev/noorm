@@ -447,6 +447,22 @@ def convert_point(s):
     return Point(*coord)
 
 
+# See https://docs.python.org/3/library/sqlite3.html#sqlite3-adapter-converter-recipes
+def adapt_date_iso(val: date):
+    """Adapt datetime.date to ISO 8601 date."""
+    return val.isoformat()
+
+
+def convert_date(val: bytes):
+    """Convert ISO 8601 date to datetime.date object."""
+    return date.fromisoformat(val.decode())
+
+
+def convert_timestamp(val: bytes):
+    """Convert ISO 8601 datetime to datetime.datetime object."""
+    return datetime.fromisoformat(val.decode())
+
+
 @dataclass
 class ConvRes:
     p: Point
@@ -468,6 +484,10 @@ def get_converted():
 
 def test_conversions():
     sqlite3.register_converter("point", convert_point)
+    sqlite3.register_adapter(date, adapt_date_iso)
+    sqlite3.register_converter("date", convert_date)
+    sqlite3.register_converter("timestamp", convert_timestamp)
+
     conn = sqlite3.connect(":memory:", detect_types=sqlite3.PARSE_DECLTYPES)
     conn.execute(
         "CREATE TABLE test(p point, d1 date, d2 date, dt1 timestamp, dt2 timestamp)"

@@ -81,6 +81,56 @@ async def test_fetch_all_wrong(session: AsyncSession):
         _ = await get_all_users_wrong2(session, 1)
 
 
+# MARK: repo style
+
+
+class Repo:
+    def __init__(self, limit=None):
+        self.limit = limit
+
+    @nm.sql_fetch_all(namedtuple("AllUsersResult", "id,username"))
+    def get_all_users_objmethod(self, do_cancel: bool):
+        if do_cancel:
+            raise nm.CancelExecException
+        res = sa.select(User.id, User.username).order_by(User.id)
+        if self.limit is not None:
+            res = res.limit(self.limit)
+        return res
+
+    @classmethod
+    @nm.sql_fetch_all(namedtuple("AllUsersResult", "id,username"))
+    def get_all_users_classmethod(cls, do_cancel: bool):
+        if do_cancel:
+            raise nm.CancelExecException
+        return sa.select(User.id, User.username).order_by(User.id)
+
+    @staticmethod
+    @nm.sql_fetch_all(namedtuple("AllUsersResult", "id,username"))
+    def get_all_users_staticmethod(do_cancel: bool):
+        if do_cancel:
+            raise nm.CancelExecException
+        return sa.select(User.id, User.username).order_by(User.id)
+
+
+async def test_repo_objmethod(session: AsyncSession):
+    got2 = await Repo().get_all_users_objmethod(session, False)
+    assert len(got2) == 2
+    got1 = await Repo(limit=1).get_all_users_objmethod(session, False)
+    assert len(got1) == 1
+    got0 = await Repo().get_all_users_objmethod(session, True)
+    assert len(got0) == 0
+
+
+async def test_repo_classmethod(session: AsyncSession):
+    got2 = await Repo.get_all_users_classmethod(session, False)
+    assert len(got2) == 2
+
+
+async def test_repo_staticmethod(session: AsyncSession):
+    got3 = await Repo.get_all_users_staticmethod(session, False)
+    assert len(got3) == 2
+
+
 # MARK: sql_iterate
 
 
