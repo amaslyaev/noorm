@@ -56,7 +56,8 @@ def make_scalar_decoder(type_: Type) -> Callable[[Any], Any]:
 def make_decoder(row_type: type) -> Callable[[dict], dict]:
     if is_dataclass(row_type):
         fields_mapper: dict[str, Callable] = {
-            fld.name: make_scalar_decoder(fld.type) for fld in fields(row_type)
+            fld.name: make_scalar_decoder(fld.type)  # type: ignore
+            for fld in fields(row_type)
         }
 
         def _dataclass_decoder(inp: dict) -> dict:
