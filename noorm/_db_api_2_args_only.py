@@ -12,11 +12,11 @@ def params(*args):
     return PrepareFuncResult(None, args)
 
 
-def query_and_params(sql: str, *args):
+def query_and_params(sql: str | None, *args):
     return PrepareFuncResult(sql, args)
 
 
-def query_only(sql: str):
+def query_only(sql: str | None):
     return PrepareFuncResult(sql, None)
 
 

@@ -29,11 +29,11 @@ def params(*args, **kwargs):
     return PrepareFuncResult(None, _bake_params(args, kwargs))
 
 
-def query_and_params(sql: str, *args, **kwargs):
+def query_and_params(sql: str | None, *args, **kwargs):
     return PrepareFuncResult(sql, _bake_params(args, kwargs))
 
 
-def query_only(sql: str):
+def query_only(sql: str | None):
     return PrepareFuncResult(sql, None)
 
 

@@ -29,7 +29,7 @@ def sql_fetch_all(row_type: Type[TR], sql: str | None = None):
     """
 
     def decorator(
-        func: Callable[F_Spec, PrepareFuncResult | ParamsAutoEnum | None]
+        func: Callable[F_Spec, PrepareFuncResult | ParamsAutoEnum | None],
     ) -> Callable[Concatenate[ConnectionOrCursor, F_Spec], list[TR]]:
         decoder = _make_decoder(row_type)
 
@@ -73,7 +73,7 @@ def sql_iterate(row_type: Type[TR], sql: str | None = None):
     """
 
     def decorator(
-        func: Callable[F_Spec, PrepareFuncResult | ParamsAutoEnum | None]
+        func: Callable[F_Spec, PrepareFuncResult | ParamsAutoEnum | None],
     ) -> Callable[Concatenate[sqlite3.Connection, F_Spec], Generator[TR, None, None]]:
         decoder = _make_decoder(row_type)
 
@@ -118,7 +118,7 @@ def sql_one_or_none(row_type: Type[TR], sql: str | None = None):
     """
 
     def decorator(
-        func: Callable[F_Spec, PrepareFuncResult | ParamsAutoEnum | None]
+        func: Callable[F_Spec, PrepareFuncResult | ParamsAutoEnum | None],
     ) -> Callable[Concatenate[ConnectionOrCursor, F_Spec], TR | None]:
         decoder = _make_decoder(row_type)
 
@@ -162,7 +162,7 @@ def sql_scalar_or_none(res_type: Type[TR], sql: str | None = None):
     """
 
     def decorator(
-        func: Callable[F_Spec, PrepareFuncResult | ParamsAutoEnum | None]
+        func: Callable[F_Spec, PrepareFuncResult | ParamsAutoEnum | None],
     ) -> Callable[Concatenate[ConnectionOrCursor, F_Spec], TR | None]:
         decoder = _make_scalar_decoder(res_type)
 
@@ -203,7 +203,7 @@ def sql_fetch_scalars(res_type: Type[TR], sql: str | None = None):
     """
 
     def decorator(
-        func: Callable[F_Spec, PrepareFuncResult | ParamsAutoEnum | None]
+        func: Callable[F_Spec, PrepareFuncResult | ParamsAutoEnum | None],
     ) -> Callable[Concatenate[ConnectionOrCursor, F_Spec], list[TR]]:
         decoder = _make_scalar_decoder(res_type)
 
@@ -245,7 +245,7 @@ def sql_iterate_scalars(res_type: Type[TR], sql: str | None = None):
     """
 
     def decorator(
-        func: Callable[F_Spec, PrepareFuncResult | ParamsAutoEnum | None]
+        func: Callable[F_Spec, PrepareFuncResult | ParamsAutoEnum | None],
     ) -> Callable[Concatenate[sqlite3.Connection, F_Spec], Generator[TR, None, None]]:
         decoder = _make_scalar_decoder(res_type)
 
@@ -276,7 +276,7 @@ def sql_iterate_scalars(res_type: Type[TR], sql: str | None = None):
 
 @overload
 def sql_execute(
-    func: Callable[F_Spec, PrepareFuncResult | ParamsAutoEnum | None]
+    func: Callable[F_Spec, PrepareFuncResult | ParamsAutoEnum | None],
 ) -> Callable[Concatenate[ConnectionOrCursor, F_Spec], None]:
     pass  # pragma: no cover
 
@@ -313,7 +313,7 @@ def sql_execute(  # type: ignore
 
     def decorator_wrapper(sql: str | None):
         def decorator(
-            func: Callable[F_Spec, PrepareFuncResult | ParamsAutoEnum | None]
+            func: Callable[F_Spec, PrepareFuncResult | ParamsAutoEnum | None],
         ) -> Callable[Concatenate[ConnectionOrCursor, F_Spec], None]:
             class wrapper(WrapperBase):
                 def __call__(
@@ -348,7 +348,7 @@ class set_default_db:
 
     _conns: list[sqlite3.Connection | None] = []
 
-    def __init__(self, conn: sqlite3.Connection) -> None:
+    def __init__(self, conn: sqlite3.Connection | None) -> None:
         if not self._conns:
             self._conns.append(None)
         self.prev = self._conns[-1]
@@ -364,7 +364,7 @@ class set_default_db:
 
 
 def default_db(
-    func: Callable[Concatenate[ConnectionOrCursor, F_Spec], F_Return]
+    func: Callable[Concatenate[ConnectionOrCursor, F_Spec], F_Return],
 ) -> Callable[F_Spec, F_Return]:
     """
     The `@nm.default_db` decorator makes your DB API functions easier to use by

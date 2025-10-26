@@ -9,9 +9,9 @@ import noorm.aiomysql as nm
 
 
 class MockConn:
-    _res = []
+    _res: list[dict] = []
     _idx = 0
-    description = []
+    description: list[tuple[str, ...]] = []
     exec_call_args = None
 
     def __init__(self) -> None:
