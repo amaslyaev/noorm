@@ -9,9 +9,9 @@ import noorm.pymysql as nm
 
 
 class MockConn(Mock):
-    _res = []
+    _res: list[dict] = []
     _idx = 0
-    description = []
+    description: list[tuple[str, ...]] = []
 
     def cursor(self):
         return self

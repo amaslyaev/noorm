@@ -24,12 +24,36 @@ PARAMS_APPLY_NAMED = ParamsAutoEnum.PARAMS_APPLY_NAMED
 
 
 class WrapperBase:
-    def __init__(self, func) -> None:
+    def __init__(self, func, bound_unwrapped=None, do_register=True) -> None:
         self._func = func
-        get_registry().register(func)
+        self._orig_func = func
+        self._bound_unwrapped = bound_unwrapped
+        if isinstance(self._func, (classmethod, staticmethod)):
+            self._func = self._func.__wrapped__
+        # update_wrapper(self, func)
+        if do_register:
+            get_registry().register(func)
 
     def unwrapped(self, *args, **kwargs):
+        if self._bound_unwrapped:
+            return self._bound_unwrapped(*args, **kwargs)
         return self._func(*args, **kwargs)
+
+    def __call__(self, *args, **kwargs):
+        return self._func(*args, **kwargs)
+
+    def __get__(self, obj, objtype=None):
+        # If the function is an object or class method, here we inject `self` or `cls`
+        def _bound(*args, **kwargs):
+            return self(args[0], obj, *(args[1:]), **kwargs)
+
+        def _bound_unwrapped(*args, **kwargs):
+            return self._func(obj, *args, **kwargs)
+
+        if isinstance(self._orig_func, staticmethod):
+            return self
+        else:
+            return WrapperBase(_bound, _bound_unwrapped, False)
 
 
 @lru_cache

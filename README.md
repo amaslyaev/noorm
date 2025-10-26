@@ -3,6 +3,7 @@
 [![GitHub license](https://img.shields.io/github/license/Naereen/StrapDown.js.svg)](https://github.com/amaslyaev/noorm/blob/master/LICENSE)
 [![codecov](https://codecov.io/gh/amaslyaev/noorm/graph/badge.svg?token=31YWXNHPMM)](https://codecov.io/gh/amaslyaev/noorm)
 [![Code style](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black/)
+[![AI-gen code 0%](https://img.shields.io/badge/AI--generated_code-0%25-lime)](https://img.shields.io)
 
 ## noorm
 
@@ -163,6 +164,41 @@ async def main():
         for usr_summary in await get_users_with_order_summary(session):
             print(usr_summary)
 ```
+
+#### Example for "Repository-style" usage
+
+Sometimes it might be useful to make DB API layer object-oriented. In this case you can use the **@nm.\*** decorators on object methods, class methods, and static methods.
+```python
+class OrdersRepo:
+    def __init__(self, request_context: RequestContext) -> None:
+        self._request_context = request_context
+
+    @nm.sql_fetch_all(DbOrder)
+    def get_orders(self):
+        query = (
+            sa.select(
+                Order.id,
+                Order.user_id,
+                Order.order_date,
+                Order.amount,
+            )
+            .order_by(Order.order_date.desc())
+        )
+        if self._request_context.is_superuser:
+            query = query.where(Order.user_id == self._request_context.current_user_id)
+        return query
+
+    @nm.sql_scalar_or_none(int)
+    @classmethod
+    def get_max_id(cls)
+        return sa.select(sa.func.max(Order.id))
+
+    @nm.sql_scalar_or_none(int)
+    @staticmethod
+    def get_count_less_than(amount: Decimal)
+        return sa.select(sa.func.count().select_from(Order).where(Order.amount < amount))
+```
+Consider placing the **@nm.\*** decorators before the `@classmethod` and `@staticmethod`.
 
 ## Suggestions
 

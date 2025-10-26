@@ -1,14 +1,14 @@
 [tool.poetry]
 name = "true-noorm"
 packages = [{ include = "noorm" }]
-version = "0.1.7"
+version = "0.1.8"
 description = "NoORM (Not only ORM) - make your database operations convenient and natural"
 authors = ["Alexander Maslyeav <maslyaev@gmail.com>"]
 license = "MIT"
 readme = "README.md"
 homepage = "https://github.com/amaslyaev/noorm/"
 repository = "https://github.com/amaslyaev/noorm/"
-documentation = ""
+documentation = "https://github.com/amaslyaev/noorm/blob/main/README.md"
 keywords = ["database", "sql", "orm", "noorm", "sqlite", "postgres", "postgresql", "mysql"]
 classifiers = [
     "Topic :: Software Development :: Libraries :: Python Modules",
@@ -27,13 +27,13 @@ classifiers = [
 python = "^3.10"
 
 [tool.poetry.group.dev.dependencies]
-pytest = "^8.1.1"
-pytest-cov = "^5.0.0"
+pytest = "^8.4.2"
+pytest-cov = "^7.0.0"
 flake8 = "^7.0.0"
 black = "^24.4.0"
 mypy = "^1.9.0"
 SQLAlchemy = "^1.4.31"
-asyncpg = "^0.29.0"
+asyncpg = "^0.30.0"
 sqlalchemy2-stubs = "^0.0.2a35"
 pytest-asyncio = "^0.23.6"
 aiosqlite = "^0.20.0"

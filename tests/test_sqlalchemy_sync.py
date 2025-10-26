@@ -84,6 +84,72 @@ def test_fetch_all_wrong(session: Session):
         _ = get_all_users_wrong2(session, 1)
 
 
+# MARK: repo style
+
+
+class Repo:
+    def __init__(self, limit=None):
+        self.limit = limit
+
+    @nm.sql_fetch_all(namedtuple("AllUsersResult", "id,username"))
+    def get_all_users_objmethod(self, do_cancel: bool):
+        """Test for object method"""
+        if do_cancel:
+            raise nm.CancelExecException
+        res = sa.select(User.id, User.username).order_by(User.id)
+        if self.limit is not None:
+            res = res.limit(self.limit)
+        return res
+
+    @nm.sql_fetch_all(namedtuple("AllUsersResult", "id,username"))
+    @classmethod
+    def get_all_users_classmethod(cls, do_cancel: bool):
+        """Test for class method"""
+        if do_cancel:
+            raise nm.CancelExecException
+        return sa.select(User.id, User.username).order_by(User.id)
+
+    @nm.sql_fetch_all(namedtuple("AllUsersResult", "id,username"))
+    @staticmethod
+    def get_all_users_staticmethod(do_cancel: bool):
+        """Test for static method"""
+        if do_cancel:
+            raise nm.CancelExecException
+        return sa.select(User.id, User.username).order_by(User.id)
+
+
+def test_repo_objmethod(session: Session):
+    got2 = Repo().get_all_users_objmethod(session, False)
+    assert len(got2) == 2
+    got1 = Repo(limit=1).get_all_users_objmethod(session, False)
+    assert len(got1) == 1
+    got0 = Repo().get_all_users_objmethod(session, True)
+    assert len(got0) == 0
+    assert isinstance(Repo().get_all_users_objmethod.unwrapped(False), sa.sql.Select)
+    with pytest.raises(nm.CancelExecException):
+        Repo().get_all_users_objmethod.unwrapped(True)
+
+
+def test_repo_classmethod(session: Session):
+    got2 = Repo.get_all_users_classmethod(session, False)
+    assert len(got2) == 2
+    got0 = Repo.get_all_users_classmethod(session, True)
+    assert len(got0) == 0
+    assert isinstance(Repo().get_all_users_classmethod.unwrapped(False), sa.sql.Select)
+    with pytest.raises(nm.CancelExecException):
+        Repo().get_all_users_classmethod.unwrapped(True)
+
+
+def test_repo_staticmethod(session: Session):
+    got2 = Repo.get_all_users_staticmethod(session, False)
+    assert len(got2) == 2
+    got0 = Repo.get_all_users_staticmethod(session, True)
+    assert len(got0) == 0
+    assert isinstance(Repo().get_all_users_staticmethod.unwrapped(False), sa.sql.Select)
+    with pytest.raises(nm.CancelExecException):
+        Repo().get_all_users_staticmethod.unwrapped(True)
+
+
 # MARK: sql_iterate
 
 
@@ -183,7 +249,7 @@ def test_fetch_scalars(session: Session):
 # MARK: sql_iterate_scalars
 
 
-@nm.sql_iterate_scalars(str, "select username from users order by rowid")
+@nm.sql_iterate_scalars(str)
 def iter_usernames():
     return sa.select(User.username).order_by(User.id)
 
