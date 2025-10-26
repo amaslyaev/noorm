@@ -1,5 +1,4 @@
 from enum import Enum
-import sys
 from functools import lru_cache
 import inspect
 
@@ -29,7 +28,7 @@ class WrapperBase:
         self._func = func
         self._orig_func = func
         self._bound_unwrapped = bound_unwrapped
-        if isinstance(self._func, (classmethod, staticmethod)) and sys.version > "3.13":
+        if isinstance(self._func, (classmethod, staticmethod)):
             self._func = self._func.__wrapped__
         # update_wrapper(self, func)
         if do_register:
@@ -51,7 +50,7 @@ class WrapperBase:
         def _bound_unwrapped(*args, **kwargs):
             return self._func(obj, *args, **kwargs)
 
-        if isinstance(self._orig_func, staticmethod) and sys.version > "3.13":
+        if isinstance(self._orig_func, staticmethod):
             return self
         else:
             return WrapperBase(_bound, _bound_unwrapped, False)
