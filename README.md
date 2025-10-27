@@ -184,7 +184,7 @@ class OrdersRepo:
             )
             .order_by(Order.order_date.desc())
         )
-        if self._request_context.is_superuser:
+        if not self._request_context.is_superuser:
             query = query.where(Order.user_id == self._request_context.current_user_id)
         return query
 
@@ -263,6 +263,8 @@ if __name__ == "__main__":
     uvicorn.run("main:app", port=5000, workers=3, log_level="info")
 ```
 Consequently, all DB operations occurring in child processes will be aggregated in the MainProcess registry.
+
+NOTE: on Python 3.14 the "multiprocess registry" feature is turned off.
 
 **Important**: statistics for `@nm.sql_iterate` and `@nm.sql_iterate_scalars` is not precise:
 1. `stat.duration` is counted only for query execution and first row extraction.

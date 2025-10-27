@@ -8,6 +8,7 @@ from multiprocessing import current_process
 from threading import Thread
 import socket
 import os
+import sys
 import pickle
 
 
@@ -39,7 +40,8 @@ class Registry:
         self._mp_socket: socket.socket | None = None
         self._mp_port = 0
         if not self._is_main_process:
-            self._mp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+            if sys.version < "3.14":
+                self._mp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
             reg_port = int(os.getenv("NOORM_REGISTRY_PORT") or "0")
             if reg_port == 0:
                 logging.warning(
@@ -74,12 +76,13 @@ class Registry:
                     "Cannot init multiprocess noorm registry in a child process"
                 )
                 return
-            self._mp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            self._mp_socket.bind(("localhost", 0))
-            self._mp_port = self._mp_socket.getsockname()[1]
-            os.environ["NOORM_REGISTRY_PORT"] = str(self._mp_port)
-            self._mp_listener_started = True
-            Thread(target=self._main_process_socket_listener, daemon=True).start()
+            if sys.version < "3.14":
+                self._mp_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+                self._mp_socket.bind(("localhost", 0))
+                self._mp_port = self._mp_socket.getsockname()[1]
+                os.environ["NOORM_REGISTRY_PORT"] = str(self._mp_port)
+                self._mp_listener_started = True
+                Thread(target=self._main_process_socket_listener, daemon=True).start()
 
     def close_multiprocess_registry(self) -> None:
         """Mainly for testing purposes"""

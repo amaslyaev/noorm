@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "true-noorm"
 packages = [{ include = "noorm" }]
-version = "0.1.8"
+version = "0.1.9"
 description = "NoORM (Not only ORM) - make your database operations convenient and natural"
 authors = ["Alexander Maslyeav <maslyaev@gmail.com>"]
 license = "MIT"
@@ -20,7 +20,8 @@ classifiers = [
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
-    "Programming Language :: Python :: 3.13"
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14"
 ]
 
 [tool.poetry.dependencies]
