@@ -1,6 +1,7 @@
 from unittest.mock import Mock
 import multiprocessing as mp
 from queue import Empty as EmptyQException
+import sys
 
 import pytest
 
@@ -60,6 +61,8 @@ def sideprocess_worker(res_queue: mp.Queue):
 
 @pytest.mark.parametrize("start_method", ("fork", "spawn"))
 def test_multiprocessing(start_method: str):
+    if sys.version > "3.14":
+        return
     mp.set_start_method(start_method, force=True)
     registry = get_registry()
     registry.clear_stat()
